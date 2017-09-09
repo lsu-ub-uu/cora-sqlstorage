@@ -1,0 +1,108 @@
+<!--
+  ~ Copyright 2017 Olov McKie
+  ~
+  ~ This file is part of Cora.
+  ~
+  ~     Cora is free software: you can redistribute it and/or modify
+  ~     it under the terms of the GNU General Public License as published by
+  ~     the Free Software Foundation, either version 3 of the License, or
+  ~     (at your option) any later version.
+  ~
+  ~     Cora is distributed in the hope that it will be useful,
+  ~     but WITHOUT ANY WARRANTY; without even the implied warranty of
+  ~     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  ~     GNU General Public License for more details.
+  ~
+  ~     You should have received a copy of the GNU General Public License
+  ~     along with Cora.  If not, see <http://www.gnu.org/licenses/>.
+  -->
+  <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+	
+	<parent>
+		<groupId>se.uu.ub.cora</groupId>
+		<artifactId>cora-parent</artifactId>
+        <version>0.6-SNAPSHOT</version>
+	</parent>
+	
+	<artifactId>sqlstorage</artifactId>
+	<version>0.1-SNAPSHOT</version>
+	<packaging>jar</packaging>
+
+	<name>sqlstorage</name>
+
+	<url>http://maven.apache.org</url>
+
+	<properties>
+		<userpicker.version>0.2-SNAPSHOT</userpicker.version>
+		<bookkeeper.version>0.10-SNAPSHOT</bookkeeper.version>
+		<spider.version>0.14-SNAPSHOT</spider.version>
+		<apptokenstorage.version>0.3-SNAPSHOT</apptokenstorage.version>
+		<json.version>0.3-SNAPSHOT</json.version>
+		<postgres.version>42.1.4</postgres.version>
+	</properties>
+
+	<scm>
+		<connection>scm:git:https://git.epc.ub.uu.se/epc/sqlstorage.git</connection>
+		<developerConnection>scm:git:https://git.epc.ub.uu.se/epc/sqlstorage.git</developerConnection>
+		<url>https://git.epc.ub.uu.se/epc/sqlstorage.git</url>
+	</scm>
+
+	<repositories>
+		<repository>
+			<id>maven-public</id>
+			<name>LSU Nexus Repository</name>
+			<url>http://epc.ub.uu.se/nexus/repository/maven-public/</url>
+			<releases>
+				<enabled>true</enabled>
+			</releases>
+			<snapshots>
+				<updatePolicy>daily</updatePolicy>
+				<enabled>true</enabled>
+			</snapshots>
+		</repository>
+	</repositories>
+
+
+	<dependencies>
+		<dependency>
+			<groupId>se.uu.ub.cora</groupId>
+			<artifactId>userpicker</artifactId>
+			<version>${userpicker.version}</version>
+			<scope>compile</scope>
+		</dependency>
+		<dependency>
+			<groupId>se.uu.ub.cora</groupId>
+			<artifactId>bookkeeper</artifactId>
+			<version>${bookkeeper.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>se.uu.ub.cora</groupId>
+			<artifactId>spider</artifactId>
+			<version>${spider.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>se.uu.ub.cora</groupId>
+			<artifactId>apptokenstorage</artifactId>
+			<version>${apptokenstorage.version}</version>
+			<scope>compile</scope>
+		</dependency>
+		<dependency>
+			<groupId>se.uu.ub.cora</groupId>
+			<artifactId>json</artifactId>
+			<version>${json.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.testng</groupId>
+			<artifactId>testng</artifactId>
+			<version>${testng.version}</version>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+    		<groupId>org.postgresql</groupId>
+    		<artifactId>postgresql</artifactId>
+    		<version>${postgres.version}</version>
+		</dependency>
+	</dependencies>
+</project>
