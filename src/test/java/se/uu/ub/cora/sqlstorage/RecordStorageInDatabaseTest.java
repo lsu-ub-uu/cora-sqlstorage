@@ -18,13 +18,27 @@
 */
 package se.uu.ub.cora.sqlstorage;
 
+import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertNotNull;
+
 import org.testng.annotations.Test;
 
-import se.uu.ub.cora.sqlstorage.RecordStorageInDatabase;
+import se.uu.ub.cora.postgres.SqlConnectionProvider;
 
 public class RecordStorageInDatabaseTest {
 	@Test
 	public void test() {
-		RecordStorageInDatabase r;
+		SqlConnectionProvider sqlConnectionProvider = new ConnectionProviderSpy();
+		RecordStorageInDatabase recordStorageInDatabase = RecordStorageInDatabase
+				.usingSqlConnectionProvider(sqlConnectionProvider);
+		assertNotNull(recordStorageInDatabase);
+	}
+
+	@Test
+	public void testGetSqlConnectionProvider() {
+		SqlConnectionProvider sqlConnectionProvider = new ConnectionProviderSpy();
+		RecordStorageInDatabase recordStorageInDatabase = RecordStorageInDatabase
+				.usingSqlConnectionProvider(sqlConnectionProvider);
+		assertEquals(recordStorageInDatabase.getSqlConnectionProvider(), sqlConnectionProvider);
 	}
 }
