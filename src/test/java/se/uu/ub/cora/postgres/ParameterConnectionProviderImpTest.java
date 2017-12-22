@@ -26,8 +26,6 @@ import java.sql.Connection;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
-import se.uu.ub.cora.sqlstorage.SqlStorageException;
-
 public class ParameterConnectionProviderImpTest {
 
 	// Connection c = null;
@@ -60,20 +58,21 @@ public class ParameterConnectionProviderImpTest {
 				.usingInitialContextAndName(contextSpy, name);
 	}
 
-	@Test(expectedExceptions = SqlStorageException.class)
-	public void testInitProblemWithNullDataSource() throws Exception {
-		InitialContextSpy context = new InitialContextSpy();
-		context.ds = null;
-		postgresConnectionProviderImp = ContextConnectionProviderImp.usingInitialContextAndName(context,
-				name);
-		assertNotNull(postgresConnectionProviderImp);
-	}
-
-	@Test
-	public void testNameIsReadFromInitialContext() {
-		assertNotNull(postgresConnectionProviderImp);
-		assertEquals(contextSpy.name, name);
-	}
+	// @Test(expectedExceptions = SqlStorageException.class)
+	// public void testInitProblemWithNullDataSource() throws Exception {
+	// InitialContextSpy context = new InitialContextSpy();
+	// context.ds = null;
+	// postgresConnectionProviderImp =
+	// ContextConnectionProviderImp.usingInitialContextAndName(context,
+	// name);
+	// assertNotNull(postgresConnectionProviderImp);
+	// }
+	//
+	// @Test
+	// public void testNameIsReadFromInitialContext() {
+	// assertNotNull(postgresConnectionProviderImp);
+	// assertEquals(contextSpy.name, name);
+	// }
 
 	@Test
 	public void testGetConnectionIsFetchedFromDatasource() throws Exception {

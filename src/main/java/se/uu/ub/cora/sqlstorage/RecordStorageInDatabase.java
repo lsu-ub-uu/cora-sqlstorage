@@ -18,9 +18,15 @@
 */
 package se.uu.ub.cora.sqlstorage;
 
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.Collection;
 
 import se.uu.ub.cora.bookkeeper.data.DataGroup;
+import se.uu.ub.cora.bookkeeper.data.converter.DataGroupToJsonConverter;
+import se.uu.ub.cora.json.builder.org.OrgJsonBuilderFactoryAdapter;
 import se.uu.ub.cora.postgres.SqlConnectionProvider;
 import se.uu.ub.cora.spider.record.storage.RecordStorage;
 
@@ -41,6 +47,23 @@ public class RecordStorageInDatabase implements RecordStorage {
 	@Override
 	public DataGroup read(String type, String id) {
 		// TODO Auto-generated method stub
+
+		// trams test
+		try {
+			Connection con = sqlConnectionProvider.getConnection();
+			PreparedStatement prepareStatement = con.prepareStatement("select * from trying;");
+			ResultSet resultSet = prepareStatement.executeQuery();
+			while (resultSet.next()) {
+				String idRead = resultSet.getString("id");
+				String stuff = resultSet.getString("stuff");
+				String x = "";
+				x += "1";
+			}
+		} catch (SQLException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+
 		return null;
 	}
 
@@ -67,7 +90,43 @@ public class RecordStorageInDatabase implements RecordStorage {
 	public void update(String type, String id, DataGroup record, DataGroup linkList,
 			String dataDivider) {
 		// TODO Auto-generated method stub
+		// trams test2 insert
+		try {
+			Connection con = sqlConnectionProvider.getConnection();
+			PreparedStatement preparedStatement = con.prepareStatement(
+					"insert into records (recordType, recordId, dataDivider, data) values (?, ?, ?, to_json(?::json))");
+			String jsonString = convertDataGroupToJsonString(record);
+			// create the mysql insert preparedstatement
+			preparedStatement.setString(1, type);
+			preparedStatement.setString(2, id);
+			preparedStatement.setString(3, dataDivider);
+			preparedStatement.setString(4, jsonString);
 
+			// execute the preparedstatement
+			preparedStatement.execute();
+
+			// ResultSet resultSet = prepareStatement.executeQuery();
+			// while (resultSet.next()) {
+			// String idRead = resultSet.getString("id");
+			// String stuff = resultSet.getString("stuff");
+			String x = "";
+			x += "1";
+			// }
+		} catch (SQLException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+
+	}
+
+	private String convertDataGroupToJsonString(DataGroup dataGroup) {
+		DataGroupToJsonConverter dataToJsonConverter = createDataGroupToJsonConvert(dataGroup);
+		return dataToJsonConverter.toJson();
+	}
+
+	private DataGroupToJsonConverter createDataGroupToJsonConvert(DataGroup dataGroup) {
+		se.uu.ub.cora.json.builder.JsonBuilderFactory jsonBuilderFactory = new OrgJsonBuilderFactoryAdapter();
+		return DataGroupToJsonConverter.usingJsonFactoryForDataGroup(jsonBuilderFactory, dataGroup);
 	}
 
 	@Override
