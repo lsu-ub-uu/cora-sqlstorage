@@ -68,8 +68,8 @@ public class RecordStorageInDatabase implements RecordStorage {
 	}
 
 	@Override
-	public void create(String type, String id, DataGroup record, DataGroup linkList,
-			String dataDivider) {
+	public void create(String type, String id, DataGroup collectedTerms, DataGroup record,
+			DataGroup linkList, String dataDivider) {
 		// TODO Auto-generated method stub
 
 	}
@@ -87,14 +87,14 @@ public class RecordStorageInDatabase implements RecordStorage {
 	}
 
 	@Override
-	public void update(String type, String id, DataGroup record, DataGroup linkList,
-			String dataDivider) {
+	public void update(String type, String id, DataGroup collectedTerms, DataGroup record,
+			DataGroup linkList, String dataDivider) {
 		// TODO Auto-generated method stub
 		// trams test2 insert
 		try {
 			Connection con = sqlConnectionProvider.getConnection();
 			PreparedStatement preparedStatement = con.prepareStatement(
-					"insert into records (recordType, recordId, dataDivider, data) values (?, ?, ?, to_json(?::json))");
+					"insert into records (recordType, recordId, dataDivider, data) values (?, ?, ?, )");
 			String jsonString = convertDataGroupToJsonString(record);
 			// create the mysql insert preparedstatement
 			preparedStatement.setString(1, type);
@@ -130,13 +130,13 @@ public class RecordStorageInDatabase implements RecordStorage {
 	}
 
 	@Override
-	public Collection<DataGroup> readList(String type) {
+	public Collection<DataGroup> readList(String type, DataGroup filter) {
 		// TODO Auto-generated method stub
 		return null;
 	}
 
 	@Override
-	public Collection<DataGroup> readAbstractList(String type) {
+	public Collection<DataGroup> readAbstractList(String type, DataGroup filter) {
 		// TODO Auto-generated method stub
 		return null;
 	}
