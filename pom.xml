@@ -1,5 +1,5 @@
 <!--
-  ~ Copyright 2017 Olov McKie
+  ~ Copyright 2017, 2018 Olov McKie
   ~
   ~ This file is part of Cora.
   ~
@@ -23,11 +23,11 @@
 	<parent>
 		<groupId>se.uu.ub.cora</groupId>
 		<artifactId>cora-parent</artifactId>
-        <version>0.6-SNAPSHOT</version>
+        <version>0.7-SNAPSHOT</version>
 	</parent>
 	
 	<artifactId>sqlstorage</artifactId>
-	<version>0.2-SNAPSHOT</version>
+	<version>0.3-SNAPSHOT</version>
 	<packaging>jar</packaging>
 
 	<name>sqlstorage</name>
@@ -35,34 +35,19 @@
 	<url>http://maven.apache.org</url>
 
 	<properties>
-		<userpicker.version>0.3-SNAPSHOT</userpicker.version>
-		<bookkeeper.version>0.10-SNAPSHOT</bookkeeper.version>
-		<spider.version>0.14-SNAPSHOT</spider.version>
-		<apptokenstorage.version>0.3-SNAPSHOT</apptokenstorage.version>
-		<json.version>0.3-SNAPSHOT</json.version>
+		<userpicker.version>0.4-SNAPSHOT</userpicker.version>
+		<bookkeeper.version>0.12-SNAPSHOT</bookkeeper.version>
+		<spider.version>0.15-SNAPSHOT</spider.version>
+		<apptokenstorage.version>0.4-SNAPSHOT</apptokenstorage.version>
+		<json.version>0.4-SNAPSHOT</json.version>
 		<postgres.version>42.1.4</postgres.version>
 	</properties>
 
 	<scm>
-		<connection>scm:git:https://git.epc.ub.uu.se/epc/sqlstorage.git</connection>
-		<developerConnection>scm:git:https://git.epc.ub.uu.se/epc/sqlstorage.git</developerConnection>
-		<url>https://git.epc.ub.uu.se/epc/sqlstorage.git</url>
+		<connection>scm:git:https://github.com/olovm/sqlstorage.git</connection>
+		<developerConnection>scm:git:https://github.com/olovm/sqlstorage.git</developerConnection>
+		<url>https://github.com/olovm/sqlstorage.git</url>
 	</scm>
-
-	<repositories>
-		<repository>
-			<id>maven-public</id>
-			<name>LSU Nexus Repository</name>
-			<url>http://epc.ub.uu.se/nexus/repository/maven-public/</url>
-			<releases>
-				<enabled>true</enabled>
-			</releases>
-			<snapshots>
-				<updatePolicy>daily</updatePolicy>
-				<enabled>true</enabled>
-			</snapshots>
-		</repository>
-	</repositories>
 
 
 	<dependencies>
