@@ -28,6 +28,7 @@ import se.uu.ub.cora.bookkeeper.data.DataGroup;
 import se.uu.ub.cora.bookkeeper.data.converter.DataGroupToJsonConverter;
 import se.uu.ub.cora.json.builder.org.OrgJsonBuilderFactoryAdapter;
 import se.uu.ub.cora.postgres.SqlConnectionProvider;
+import se.uu.ub.cora.spider.data.SpiderReadResult;
 import se.uu.ub.cora.spider.record.storage.RecordStorage;
 
 public class RecordStorageInDatabase implements RecordStorage {
@@ -130,13 +131,13 @@ public class RecordStorageInDatabase implements RecordStorage {
 	}
 
 	@Override
-	public Collection<DataGroup> readList(String type, DataGroup filter) {
+	public SpiderReadResult readList(String type, DataGroup filter) {
 		// TODO Auto-generated method stub
 		return null;
 	}
 
 	@Override
-	public Collection<DataGroup> readAbstractList(String type, DataGroup filter) {
+	public SpiderReadResult readAbstractList(String type, DataGroup filter) {
 		// TODO Auto-generated method stub
 		return null;
 	}
