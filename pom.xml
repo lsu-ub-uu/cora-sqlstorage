@@ -23,11 +23,11 @@
 	<parent>
 		<groupId>se.uu.ub.cora</groupId>
 		<artifactId>cora-parent</artifactId>
-        <version>0.7-SNAPSHOT</version>
+        <version>0.8-SNAPSHOT</version>
 	</parent>
 	
 	<artifactId>sqlstorage</artifactId>
-	<version>0.3-SNAPSHOT</version>
+	<version>0.4-SNAPSHOT</version>
 	<packaging>jar</packaging>
 
 	<name>sqlstorage</name>
@@ -35,10 +35,7 @@
 	<url>http://maven.apache.org</url>
 
 	<properties>
-		<userpicker.version>0.4-SNAPSHOT</userpicker.version>
-		<bookkeeper.version>0.12-SNAPSHOT</bookkeeper.version>
 		<spider.version>0.15-SNAPSHOT</spider.version>
-		<apptokenstorage.version>0.4-SNAPSHOT</apptokenstorage.version>
 		<json.version>0.4-SNAPSHOT</json.version>
 		<postgres.version>42.1.4</postgres.version>
 	</properties>
@@ -53,25 +50,8 @@
 	<dependencies>
 		<dependency>
 			<groupId>se.uu.ub.cora</groupId>
-			<artifactId>userpicker</artifactId>
-			<version>${userpicker.version}</version>
-			<scope>compile</scope>
-		</dependency>
-		<dependency>
-			<groupId>se.uu.ub.cora</groupId>
-			<artifactId>bookkeeper</artifactId>
-			<version>${bookkeeper.version}</version>
-		</dependency>
-		<dependency>
-			<groupId>se.uu.ub.cora</groupId>
 			<artifactId>spider</artifactId>
 			<version>${spider.version}</version>
-		</dependency>
-		<dependency>
-			<groupId>se.uu.ub.cora</groupId>
-			<artifactId>apptokenstorage</artifactId>
-			<version>${apptokenstorage.version}</version>
-			<scope>compile</scope>
 		</dependency>
 		<dependency>
 			<groupId>se.uu.ub.cora</groupId>
