@@ -23,11 +23,11 @@
 	<parent>
 		<groupId>se.uu.ub.cora</groupId>
 		<artifactId>cora-parent</artifactId>
-        <version>0.8-SNAPSHOT</version>
+        <version>0.8.6</version>
 	</parent>
 	
 	<artifactId>sqlstorage</artifactId>
-	<version>0.4-SNAPSHOT</version>
+	<version>0.4.0-SNAPSHOT</version>
 	<packaging>jar</packaging>
 
 	<name>sqlstorage</name>
@@ -35,15 +35,15 @@
 	<url>http://maven.apache.org</url>
 
 	<properties>
-		<spider.version>0.15-SNAPSHOT</spider.version>
-		<json.version>0.4-SNAPSHOT</json.version>
+		<spider.version>0.16.0</spider.version>
+		<json.version>0.5.7</json.version>
 		<postgres.version>42.1.4</postgres.version>
 	</properties>
 
 	<scm>
-		<connection>scm:git:https://github.com/olovm/sqlstorage.git</connection>
-		<developerConnection>scm:git:https://github.com/olovm/sqlstorage.git</developerConnection>
-		<url>https://github.com/olovm/sqlstorage.git</url>
+		<connection>scm:git:https://github.com/olovm/cora-sqlstorage.git</connection>
+		<developerConnection>scm:git:https://github.com/olovm/cora-sqlstorage.git</developerConnection>
+		<url>https://github.com/olovm/cora-sqlstorage.git</url>
 	</scm>
 
 
