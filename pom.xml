@@ -35,7 +35,7 @@
 	<url>http://maven.apache.org</url>
 
 	<properties>
-		<spider.version>0.16.0</spider.version>
+		<spider.version>0.17.0</spider.version>
 		<json.version>0.5.7</json.version>
 		<postgres.version>42.1.4</postgres.version>
 	</properties>
