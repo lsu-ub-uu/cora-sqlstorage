@@ -19,8 +19,8 @@
 
 package se.uu.ub.cora.sqlstorage;
 
-import se.uu.ub.cora.sqldatabase.RecordReader;
-import se.uu.ub.cora.sqldatabase.RecordReaderFactory;
+import se.uu.ub.cora.sqldatabase.record.RecordReader;
+import se.uu.ub.cora.sqldatabase.record.RecordReaderFactory;
 import se.uu.ub.cora.testutils.mcr.MethodCallRecorder;
 
 public class RecordReaderFactorySpy implements RecordReaderFactory {

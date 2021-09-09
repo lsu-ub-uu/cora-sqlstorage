@@ -24,8 +24,9 @@ import java.util.List;
 import java.util.Map;
 
 import se.uu.ub.cora.data.DataGroup;
-import se.uu.ub.cora.sqldatabase.RecordReader;
-import se.uu.ub.cora.sqldatabase.RecordReaderFactory;
+import se.uu.ub.cora.sqldatabase.SqlDatabaseException;
+import se.uu.ub.cora.sqldatabase.record.RecordReader;
+import se.uu.ub.cora.sqldatabase.record.RecordReaderFactory;
 import se.uu.ub.cora.storage.RecordNotFoundException;
 import se.uu.ub.cora.storage.RecordStorage;
 import se.uu.ub.cora.storage.StorageReadResult;
@@ -50,8 +51,11 @@ public class DatabaseRecordStorage implements RecordStorage {
 		Map<String, Object> conditions = new HashMap<>();
 		conditions.put("id", id);
 		try {
+			// String preparedStatement = "select * from "+type +"where id=?";
+			// DataReader dr =null;
+			// dr.readOneRowOrFailUsingSqlAndValues(preparedStatement, null)
 			recordReader.readOneRowFromDbUsingTableAndConditions(type, conditions);
-		} catch (Exception e) {
+		} catch (SqlDatabaseException e) {
 			throw new RecordNotFoundException(
 					"No record found for recordType: " + type + " with id: " + id);
 		}

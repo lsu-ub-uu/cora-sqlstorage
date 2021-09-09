@@ -47,10 +47,22 @@ public class DatabaseRecordStorageTest {
 		storage.read("nonExistingRecordType", "someId");
 	}
 
+	@Test(expectedExceptions = RecordNotFoundException.class, expectedExceptionsMessageRegExp = ""
+			+ "No record found for recordType: existingType with id: someId")
+	public void testReadIdNotFound() throws Exception {
+		readerFactory.throwExceptionOnRecordReaderOnRead = true;
+
+		storage.read("existingType", "someId");
+	}
+
+	// Timeout
+	// Lost connection
+
 	@Test
-	public void testReadOk() {
+	public void testReadOkConditionsSentToRecordReader() {
 		String recordType = "someRecordType";
 		String id = "someId";
+
 		storage.read(recordType, id);
 
 		RecordReaderSpy recordReader = (RecordReaderSpy) readerFactory.MCR.getReturnValue("factor",
@@ -63,7 +75,18 @@ public class DatabaseRecordStorageTest {
 						"readOneRowFromDbUsingTableAndConditions", 0, "conditions");
 		assertEquals(conditions.size(), 1);
 		assertEquals(conditions.get("id"), id);
+
 		// TODO: check convertions and return... but first fix other cases...
+
+	}
+
+	@Test
+	public void testReadOkReadJsonConvertedToDataGroup() throws Exception {
+		String recordType = "someRecordType";
+		String id = "someId";
+
+		storage.read(recordType, id);
+
 	}
 
 }

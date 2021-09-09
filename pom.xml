@@ -41,9 +41,7 @@
 <!-- 		<storage.version>4.2.0</storage.version> -->
 		<data.version>5.1.0</data.version>
 		<json.version>2.5.0</json.version>
-<!-- 		changed to snapshot to get updated javadoc -->
-		<sqldatabase.version>4.2-SNAPSHOT</sqldatabase.version>
-<!-- 		<sqldatabase.version>4.1.0</sqldatabase.version> -->
+		<sqldatabase.version>5.0-SNAPSHOT</sqldatabase.version>
 		<logger.version>2.3.0</logger.version>
 		<postgres.version>42.2.23</postgres.version>
 		<testutils.version>1.1.1</testutils.version>
