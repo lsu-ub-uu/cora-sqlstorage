@@ -23,10 +23,12 @@ import java.util.Map;
 
 import se.uu.ub.cora.sqldatabase.DbQueryInfo;
 import se.uu.ub.cora.sqldatabase.RecordReader;
+import se.uu.ub.cora.sqldatabase.SqlStorageException;
 import se.uu.ub.cora.testutils.mcr.MethodCallRecorder;
 
 public class RecordReaderSpy implements RecordReader {
 	MethodCallRecorder MCR = new MethodCallRecorder();
+	public boolean throwExceptionOnRead = false;
 
 	@Override
 	public List<Map<String, Object>> readAllFromTable(String tableName) {
@@ -44,6 +46,10 @@ public class RecordReaderSpy implements RecordReader {
 	@Override
 	public Map<String, Object> readOneRowFromDbUsingTableAndConditions(String tableName,
 			Map<String, Object> conditions) {
+
+		if (throwExceptionOnRead) {
+			throw SqlStorageException.withMessage("Error from spy");
+		}
 		MCR.addCall("tableName", tableName, "conditions", conditions);
 		Map<String, Object> result = null;
 		MCR.addReturned(result);

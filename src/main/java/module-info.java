@@ -1,7 +1,8 @@
 module se.uu.ub.cora.sqlstorage {
-	requires transitive java.sql;
 	requires se.uu.ub.cora.storage;
-	requires transitive se.uu.ub.cora.sqldatabase;
+	requires se.uu.ub.cora.sqldatabase;
+	requires se.uu.ub.cora.logger;
 
-	exports se.uu.ub.cora.sqlstorage;
+	requires java.sql;
+	// exports se.uu.ub.cora.sqlstorage;
 }

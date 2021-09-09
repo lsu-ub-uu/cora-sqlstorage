@@ -26,13 +26,14 @@ import java.util.Map;
 import se.uu.ub.cora.data.DataGroup;
 import se.uu.ub.cora.sqldatabase.RecordReader;
 import se.uu.ub.cora.sqldatabase.RecordReaderFactory;
+import se.uu.ub.cora.storage.RecordNotFoundException;
 import se.uu.ub.cora.storage.RecordStorage;
 import se.uu.ub.cora.storage.StorageReadResult;
 
 /**
  * DatabaseRecordStorage provides an implementation of {@link RecordStorage} using a standardized
  * database schema to store records and metadata in the standard Cora JSON format. The database has
- * one table for each recordType. The tables consist of two columns recordId and dataRecord for the
+ * one table for each recordType. The tables consist of two columns id and dataRecord with the
  * record stored in JSON format.
  */
 public class DatabaseRecordStorage implements RecordStorage {
@@ -47,8 +48,13 @@ public class DatabaseRecordStorage implements RecordStorage {
 	public DataGroup read(String type, String id) {
 		RecordReader recordReader = readerFactory.factor();
 		Map<String, Object> conditions = new HashMap<>();
-		conditions.put("recordId", id);
-		recordReader.readOneRowFromDbUsingTableAndConditions(type, conditions);
+		conditions.put("id", id);
+		try {
+			recordReader.readOneRowFromDbUsingTableAndConditions(type, conditions);
+		} catch (Exception e) {
+			throw new RecordNotFoundException(
+					"No record found for recordType: " + type + " with id: " + id);
+		}
 		return null;
 	}
 

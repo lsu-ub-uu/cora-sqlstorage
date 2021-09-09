@@ -39,9 +39,12 @@ public class DatabaseRecordStorageTest {
 		storage = new DatabaseRecordStorage(readerFactory);
 	}
 
-	@Test(expectedExceptions = RecordNotFoundException.class)
+	@Test(expectedExceptions = RecordNotFoundException.class, expectedExceptionsMessageRegExp = ""
+			+ "No record found for recordType: nonExistingRecordType with id: someId")
 	public void testReadTypeNotFound() throws Exception {
-		storage.read("non existing recordType", "someId");
+		readerFactory.throwExceptionOnRecordReaderOnRead = true;
+
+		storage.read("nonExistingRecordType", "someId");
 	}
 
 	@Test
@@ -59,7 +62,7 @@ public class DatabaseRecordStorageTest {
 				.getValueForMethodNameAndCallNumberAndParameterName(
 						"readOneRowFromDbUsingTableAndConditions", 0, "conditions");
 		assertEquals(conditions.size(), 1);
-		assertEquals(conditions.get("recordId"), id);
+		assertEquals(conditions.get("id"), id);
 		// TODO: check convertions and return... but first fix other cases...
 	}
 

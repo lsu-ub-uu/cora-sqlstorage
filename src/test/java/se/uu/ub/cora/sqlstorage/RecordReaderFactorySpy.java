@@ -25,11 +25,13 @@ import se.uu.ub.cora.testutils.mcr.MethodCallRecorder;
 
 public class RecordReaderFactorySpy implements RecordReaderFactory {
 	MethodCallRecorder MCR = new MethodCallRecorder();
+	boolean throwExceptionOnRecordReaderOnRead = false;
 
 	@Override
 	public RecordReader factor() {
 		MCR.addCall();
-		RecordReader factoredRecordReader = new RecordReaderSpy();
+		RecordReaderSpy factoredRecordReader = new RecordReaderSpy();
+		factoredRecordReader.throwExceptionOnRead = throwExceptionOnRecordReaderOnRead;
 		MCR.addReturned(factoredRecordReader);
 		return factoredRecordReader;
 	}

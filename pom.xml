@@ -44,6 +44,7 @@
 <!-- 		changed to snapshot to get updated javadoc -->
 		<sqldatabase.version>4.2-SNAPSHOT</sqldatabase.version>
 <!-- 		<sqldatabase.version>4.1.0</sqldatabase.version> -->
+		<logger.version>2.3.0</logger.version>
 		<postgres.version>42.2.23</postgres.version>
 		<testutils.version>1.1.1</testutils.version>
 	</properties>
@@ -80,6 +81,12 @@
 			<groupId>se.uu.ub.cora</groupId>
 			<artifactId>sqldatabase</artifactId>
 			<version>${sqldatabase.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>se.uu.ub.cora</groupId>
+			<artifactId>logger</artifactId>
+			<version>${logger.version}</version>
+			<scope>provided</scope>
 		</dependency>
 		<dependency>
 			<groupId>org.testng</groupId>
