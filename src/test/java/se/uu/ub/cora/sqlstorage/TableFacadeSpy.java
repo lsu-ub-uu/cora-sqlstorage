@@ -19,61 +19,85 @@
 package se.uu.ub.cora.sqlstorage;
 
 import java.util.List;
-import java.util.Map;
 
-import se.uu.ub.cora.sqldatabase.DbQueryInfo;
+import se.uu.ub.cora.sqldatabase.Row;
 import se.uu.ub.cora.sqldatabase.SqlDatabaseException;
-import se.uu.ub.cora.sqldatabase.record.RecordReader;
+import se.uu.ub.cora.sqldatabase.table.TableFacade;
+import se.uu.ub.cora.sqldatabase.table.TableQuery;
 import se.uu.ub.cora.testutils.mcr.MethodCallRecorder;
 
-public class RecordReaderSpy implements RecordReader {
+public class TableFacadeSpy implements TableFacade {
 	MethodCallRecorder MCR = new MethodCallRecorder();
 	public boolean throwExceptionOnRead = false;
 
 	@Override
-	public List<Map<String, Object>> readAllFromTable(String tableName) {
+	public void close() {
+		MCR.addCall();
+	}
+
+	@Override
+	public void insertRowUsingQuery(TableQuery tableQuery) {
+		// TODO Auto-generated method stub
+
+	}
+
+	@Override
+	public List<Row> readRowsForQuery(TableQuery tableQuery) {
 		// TODO Auto-generated method stub
 		return null;
 	}
 
 	@Override
-	public List<Map<String, Object>> readFromTableUsingConditions(String tableName,
-			Map<String, Object> conditions) {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	@Override
-	public Map<String, Object> readOneRowFromDbUsingTableAndConditions(String tableName,
-			Map<String, Object> conditions) {
-
+	public Row readOneRowForQuery(TableQuery tableQuery) {
+		MCR.addCall("tableQuery", tableQuery);
 		if (throwExceptionOnRead) {
 			throw SqlDatabaseException.withMessage("Error from spy");
 		}
-		MCR.addCall("tableName", tableName, "conditions", conditions);
-		Map<String, Object> result = null;
+		Row result = null;
 
 		MCR.addReturned(result);
-		return null;
+		return result;
 	}
 
 	@Override
-	public Map<String, Object> readNextValueFromSequence(String sequenceName) {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	@Override
-	public List<Map<String, Object>> readAllFromTable(String tableName, DbQueryInfo queryInfo) {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	@Override
-	public long readNumberOfRows(String tableName, Map<String, Object> conditions,
-			DbQueryInfo queryInfo) {
+	public long readNumberOfRows(TableQuery tableQuery) {
 		// TODO Auto-generated method stub
 		return 0;
 	}
 
+	@Override
+	public void updateRowsUsingQuery(TableQuery tableQuery) {
+		// TODO Auto-generated method stub
+
+	}
+
+	@Override
+	public void deleteRowsForQuery(TableQuery tableQuery) {
+		// TODO Auto-generated method stub
+
+	}
+
+	@Override
+	public long nextValueFromSequence(String sequenceName) {
+		// TODO Auto-generated method stub
+		return 0;
+	}
+
+	@Override
+	public void startTransaction() {
+		// TODO Auto-generated method stub
+
+	}
+
+	@Override
+	public void endTransaction() {
+		// TODO Auto-generated method stub
+
+	}
+
+	@Override
+	public void rollback() {
+		// TODO Auto-generated method stub
+
+	}
 }

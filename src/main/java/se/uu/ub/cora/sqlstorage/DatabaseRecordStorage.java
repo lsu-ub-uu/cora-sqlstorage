@@ -19,14 +19,13 @@
 package se.uu.ub.cora.sqlstorage;
 
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 import se.uu.ub.cora.data.DataGroup;
 import se.uu.ub.cora.sqldatabase.SqlDatabaseException;
-import se.uu.ub.cora.sqldatabase.record.RecordReader;
-import se.uu.ub.cora.sqldatabase.record.RecordReaderFactory;
+import se.uu.ub.cora.sqldatabase.SqlDatabaseFactory;
+import se.uu.ub.cora.sqldatabase.table.TableFacade;
+import se.uu.ub.cora.sqldatabase.table.TableQuery;
 import se.uu.ub.cora.storage.RecordNotFoundException;
 import se.uu.ub.cora.storage.RecordStorage;
 import se.uu.ub.cora.storage.StorageReadResult;
@@ -39,26 +38,34 @@ import se.uu.ub.cora.storage.StorageReadResult;
  */
 public class DatabaseRecordStorage implements RecordStorage {
 
-	private RecordReaderFactory readerFactory;
+	private SqlDatabaseFactory sqlDatabaseFactory;
 
-	public DatabaseRecordStorage(RecordReaderFactory readerFactory) {
-		this.readerFactory = readerFactory;
+	public DatabaseRecordStorage(SqlDatabaseFactory sqlDatabaseFactory) {
+		this.sqlDatabaseFactory = sqlDatabaseFactory;
 	}
 
 	@Override
 	public DataGroup read(String type, String id) {
-		RecordReader recordReader = readerFactory.factor();
-		Map<String, Object> conditions = new HashMap<>();
-		conditions.put("id", id);
-		try {
-			// String preparedStatement = "select * from "+type +"where id=?";
-			// DataReader dr =null;
-			// dr.readOneRowOrFailUsingSqlAndValues(preparedStatement, null)
-			recordReader.readOneRowFromDbUsingTableAndConditions(type, conditions);
+		try (TableFacade tableFacade = sqlDatabaseFactory.factorTableFacade()) {
+			TableQuery tableQuery = sqlDatabaseFactory.factorTableQuery(type);
+			tableQuery.addCondition("id", id);
+			tableFacade.readOneRowForQuery(tableQuery);
 		} catch (SqlDatabaseException e) {
 			throw new RecordNotFoundException(
 					"No record found for recordType: " + type + " with id: " + id);
 		}
+		// RecordReader recordReader = readerFactory.factorTableFacade();
+		// Map<String, Object> conditions = new HashMap<>();
+		// conditions.put("id", id);
+		// try {
+		// // String preparedStatement = "select * from "+type +"where id=?";
+		// // DataReader dr =null;
+		// // dr.readOneRowOrFailUsingSqlAndValues(preparedStatement, null)
+		// recordReader.readOneRowFromDbUsingTableAndConditions(type, conditions);
+		// } catch (SqlDatabaseException e) {
+		// throw new RecordNotFoundException(
+		// "No record found for recordType: " + type + " with id: " + id);
+		// }
 		return null;
 	}
 

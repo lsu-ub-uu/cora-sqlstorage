@@ -19,21 +19,37 @@
 
 package se.uu.ub.cora.sqlstorage;
 
-import se.uu.ub.cora.sqldatabase.record.RecordReader;
-import se.uu.ub.cora.sqldatabase.record.RecordReaderFactory;
+import se.uu.ub.cora.sqldatabase.DatabaseFacade;
+import se.uu.ub.cora.sqldatabase.SqlDatabaseFactory;
+import se.uu.ub.cora.sqldatabase.table.TableFacade;
+import se.uu.ub.cora.sqldatabase.table.TableQuery;
 import se.uu.ub.cora.testutils.mcr.MethodCallRecorder;
 
-public class RecordReaderFactorySpy implements RecordReaderFactory {
+public class SqlDatabaseFactorySpy implements SqlDatabaseFactory {
 	MethodCallRecorder MCR = new MethodCallRecorder();
-	boolean throwExceptionOnRecordReaderOnRead = false;
+	boolean throwExceptionOnTableFacadeOnRead = false;
 
 	@Override
-	public RecordReader factor() {
+	public DatabaseFacade factorDatabaseFacade() {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public TableFacade factorTableFacade() {
 		MCR.addCall();
-		RecordReaderSpy factoredRecordReader = new RecordReaderSpy();
-		factoredRecordReader.throwExceptionOnRead = throwExceptionOnRecordReaderOnRead;
-		MCR.addReturned(factoredRecordReader);
-		return factoredRecordReader;
+		TableFacadeSpy tableFacadeSpy = new TableFacadeSpy();
+		tableFacadeSpy.throwExceptionOnRead = throwExceptionOnTableFacadeOnRead;
+		MCR.addReturned(tableFacadeSpy);
+		return tableFacadeSpy;
+	}
+
+	@Override
+	public TableQuery factorTableQuery(String tableName) {
+		MCR.addCall("tableName", tableName);
+		TableQuerySpy tableQuerySpy = new TableQuerySpy();
+		MCR.addReturned(tableQuerySpy);
+		return tableQuerySpy;
 	}
 
 }
