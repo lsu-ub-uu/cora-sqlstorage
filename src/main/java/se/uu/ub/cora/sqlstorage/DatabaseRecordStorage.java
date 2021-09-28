@@ -22,6 +22,11 @@ import java.util.Collection;
 import java.util.List;
 
 import se.uu.ub.cora.data.DataGroup;
+import se.uu.ub.cora.data.converter.JsonToDataConverter;
+import se.uu.ub.cora.data.converter.JsonToDataConverterProvider;
+import se.uu.ub.cora.json.parser.JsonParser;
+import se.uu.ub.cora.json.parser.JsonValue;
+import se.uu.ub.cora.sqldatabase.Row;
 import se.uu.ub.cora.sqldatabase.SqlDatabaseException;
 import se.uu.ub.cora.sqldatabase.SqlDatabaseFactory;
 import se.uu.ub.cora.sqldatabase.table.TableFacade;
@@ -38,35 +43,48 @@ import se.uu.ub.cora.storage.StorageReadResult;
  */
 public class DatabaseRecordStorage implements RecordStorage {
 
+	private static final String ID_COLUMN = "id";
+	private static final String DATA_RECORD_COLUMN = "dataRecord";
 	private SqlDatabaseFactory sqlDatabaseFactory;
+	private JsonParser jsonParser;
 
-	public DatabaseRecordStorage(SqlDatabaseFactory sqlDatabaseFactory) {
+	public DatabaseRecordStorage(SqlDatabaseFactory sqlDatabaseFactory, JsonParser jsonParser) {
 		this.sqlDatabaseFactory = sqlDatabaseFactory;
+		this.jsonParser = jsonParser;
 	}
 
 	@Override
 	public DataGroup read(String type, String id) {
 		try (TableFacade tableFacade = sqlDatabaseFactory.factorTableFacade()) {
-			TableQuery tableQuery = sqlDatabaseFactory.factorTableQuery(type);
-			tableQuery.addCondition("id", id);
-			tableFacade.readOneRowForQuery(tableQuery);
+			return readAndConvertData(type, id, tableFacade);
 		} catch (SqlDatabaseException e) {
 			throw new RecordNotFoundException(
 					"No record found for recordType: " + type + " with id: " + id);
 		}
-		// RecordReader recordReader = readerFactory.factorTableFacade();
-		// Map<String, Object> conditions = new HashMap<>();
-		// conditions.put("id", id);
-		// try {
-		// // String preparedStatement = "select * from "+type +"where id=?";
-		// // DataReader dr =null;
-		// // dr.readOneRowOrFailUsingSqlAndValues(preparedStatement, null)
-		// recordReader.readOneRowFromDbUsingTableAndConditions(type, conditions);
-		// } catch (SqlDatabaseException e) {
-		// throw new RecordNotFoundException(
-		// "No record found for recordType: " + type + " with id: " + id);
-		// }
-		return null;
+	}
+
+	private DataGroup readAndConvertData(String type, String id, TableFacade tableFacade) {
+		String dataRecord = readFromDatabase(type, id, tableFacade);
+		return convertJsonStringToDataGroup(dataRecord);
+	}
+
+	private String readFromDatabase(String type, String id, TableFacade tableFacade) {
+		TableQuery tableQuery = assembleReadOneQuery(type, id);
+		Row readRow = tableFacade.readOneRowForQuery(tableQuery);
+		return (String) readRow.getValueByColumn(DATA_RECORD_COLUMN);
+	}
+
+	private TableQuery assembleReadOneQuery(String type, String id) {
+		TableQuery tableQuery = sqlDatabaseFactory.factorTableQuery(type);
+		tableQuery.addCondition(ID_COLUMN, id);
+		return tableQuery;
+	}
+
+	private DataGroup convertJsonStringToDataGroup(String jsonRecord) {
+		JsonValue jsonValue = jsonParser.parseString(jsonRecord);
+		JsonToDataConverter jsonToDataConverter = JsonToDataConverterProvider
+				.getConverterUsingJsonObject(jsonValue);
+		return (DataGroup) jsonToDataConverter.toInstance();
 	}
 
 	@Override
@@ -97,7 +115,7 @@ public class DatabaseRecordStorage implements RecordStorage {
 
 	@Override
 	public StorageReadResult readList(String type, DataGroup filter) {
-		// TODO Auto-generated method stub
+
 		return null;
 	}
 

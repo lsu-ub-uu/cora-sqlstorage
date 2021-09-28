@@ -16,40 +16,43 @@
  *     You should have received a copy of the GNU General Public License
  *     along with Cora.  If not, see <http://www.gnu.org/licenses/>.
  */
-
 package se.uu.ub.cora.sqlstorage;
 
-import se.uu.ub.cora.sqldatabase.DatabaseFacade;
-import se.uu.ub.cora.sqldatabase.SqlDatabaseFactory;
-import se.uu.ub.cora.sqldatabase.table.TableFacade;
-import se.uu.ub.cora.sqldatabase.table.TableQuery;
+import se.uu.ub.cora.json.parser.JsonArray;
+import se.uu.ub.cora.json.parser.JsonObject;
+import se.uu.ub.cora.json.parser.JsonParser;
+import se.uu.ub.cora.json.parser.JsonValue;
 import se.uu.ub.cora.testutils.mcr.MethodCallRecorder;
 
-public class SqlDatabaseFactorySpy implements SqlDatabaseFactory {
+public class JsonParserSpy implements JsonParser {
+
 	MethodCallRecorder MCR = new MethodCallRecorder();
-	boolean throwExceptionFromTableFacadeOnRead = false;
 
 	@Override
-	public DatabaseFacade factorDatabaseFacade() {
-		// TODO Auto-generated method stub
-		return null;
+	public JsonValue parseString(String jsonString) {
+		MCR.addCall("jsonString", jsonString);
+
+		JsonValueSpy jsonValue = new JsonValueSpy();
+		MCR.addReturned(jsonValue);
+		return jsonValue;
 	}
 
 	@Override
-	public TableFacade factorTableFacade() {
-		MCR.addCall();
-		TableFacadeSpy tableFacadeSpy = new TableFacadeSpy();
-		tableFacadeSpy.throwExceptionOnRead = throwExceptionFromTableFacadeOnRead;
-		MCR.addReturned(tableFacadeSpy);
-		return tableFacadeSpy;
+	public JsonObject parseStringAsObject(String jsonString) {
+		MCR.addCall("jsonString", jsonString);
+
+		JsonObject jsonObject = new JsonObjectSpy();
+		MCR.addReturned(jsonObject);
+		return jsonObject;
 	}
 
 	@Override
-	public TableQuery factorTableQuery(String tableName) {
-		MCR.addCall("tableName", tableName);
-		TableQuerySpy tableQuerySpy = new TableQuerySpy();
-		MCR.addReturned(tableQuerySpy);
-		return tableQuerySpy;
+	public JsonArray parseStringAsArray(String jsonString) {
+		MCR.addCall("jsonString", jsonString);
+
+		JsonArray jsonArray = new JsonArraySpy();
+		MCR.addReturned(jsonArray);
+		return jsonArray;
 	}
 
 }

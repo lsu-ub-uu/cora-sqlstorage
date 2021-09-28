@@ -53,7 +53,7 @@ public class TableFacadeSpy implements TableFacade {
 		if (throwExceptionOnRead) {
 			throw SqlDatabaseException.withMessage("Error from spy");
 		}
-		Row result = null;
+		RowSpy result = new RowSpy();
 
 		MCR.addReturned(result);
 		return result;
