@@ -18,6 +18,7 @@
  */
 package se.uu.ub.cora.sqlstorage;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
@@ -59,19 +60,18 @@ public class DatabaseRecordStorage implements RecordStorage {
 			return readAndConvertData(type, id, tableFacade);
 		} catch (SqlDatabaseException e) {
 			throw new RecordNotFoundException(
-					"No record found for recordType: " + type + " with id: " + id);
+					"No record found for recordType: " + type + " with id: " + id, e);
 		}
 	}
 
 	private DataGroup readAndConvertData(String type, String id, TableFacade tableFacade) {
-		String dataRecord = readFromDatabase(type, id, tableFacade);
-		return convertJsonStringToDataGroup(dataRecord);
+		Row readRow = readFromDatabase(type, id, tableFacade);
+		return convertRowToDataGroup(readRow);
 	}
 
-	private String readFromDatabase(String type, String id, TableFacade tableFacade) {
+	private Row readFromDatabase(String type, String id, TableFacade tableFacade) {
 		TableQuery tableQuery = assembleReadOneQuery(type, id);
-		Row readRow = tableFacade.readOneRowForQuery(tableQuery);
-		return (String) readRow.getValueByColumn(DATA_RECORD_COLUMN);
+		return tableFacade.readOneRowForQuery(tableQuery);
 	}
 
 	private TableQuery assembleReadOneQuery(String type, String id) {
@@ -80,7 +80,8 @@ public class DatabaseRecordStorage implements RecordStorage {
 		return tableQuery;
 	}
 
-	private DataGroup convertJsonStringToDataGroup(String jsonRecord) {
+	private DataGroup convertRowToDataGroup(Row readRow) {
+		String jsonRecord = (String) readRow.getValueByColumn(DATA_RECORD_COLUMN);
 		JsonValue jsonValue = jsonParser.parseString(jsonRecord);
 		JsonToDataConverter jsonToDataConverter = JsonToDataConverterProvider
 				.getConverterUsingJsonObject(jsonValue);
@@ -115,8 +116,45 @@ public class DatabaseRecordStorage implements RecordStorage {
 
 	@Override
 	public StorageReadResult readList(String type, DataGroup filter) {
+		try (TableFacade tableFacade = sqlDatabaseFactory.factorTableFacade()) {
+			return readAndConvertDataList(type, tableFacade);
+		} catch (SqlDatabaseException e) {
+			throw new RecordNotFoundException("No records found for recordType: " + type, e);
+		}
+	}
 
-		return null;
+	private StorageReadResult readAndConvertDataList(String type, TableFacade tableFacade) {
+		List<Row> readRows = readRowsFromDatabase(type, tableFacade);
+		return convertRowsToListOfDataGroups(readRows);
+	}
+
+	private List<Row> readRowsFromDatabase(String type, TableFacade tableFacade) {
+		TableQuery tableQuery = assembleReadRowsQuery(type);
+		return tableFacade.readRowsForQuery(tableQuery);
+	}
+
+	private TableQuery assembleReadRowsQuery(String type) {
+		return sqlDatabaseFactory.factorTableQuery(type);
+	}
+
+	private StorageReadResult convertRowsToListOfDataGroups(List<Row> readRows) {
+		StorageReadResult storageReadResult = createStorageReadResultForRows(readRows);
+		convertAndAddRowToResult(readRows, storageReadResult);
+		return storageReadResult;
+	}
+
+	private void convertAndAddRowToResult(List<Row> readRows, StorageReadResult storageReadResult) {
+		List<DataGroup> dataGroups = new ArrayList<>();
+		for (Row row : readRows) {
+			dataGroups.add(convertRowToDataGroup(row));
+		}
+		storageReadResult.listOfDataGroups = dataGroups;
+	}
+
+	private StorageReadResult createStorageReadResultForRows(List<Row> readRows) {
+		StorageReadResult storageReadResult = new StorageReadResult();
+		storageReadResult.totalNumberOfMatches = readRows.size();
+		return storageReadResult;
 	}
 
 	@Override

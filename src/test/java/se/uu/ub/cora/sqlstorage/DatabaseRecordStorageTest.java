@@ -18,6 +18,12 @@
  */
 package se.uu.ub.cora.sqlstorage;
 
+import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertNotNull;
+import static org.testng.Assert.assertTrue;
+
+import java.util.List;
+
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
@@ -26,6 +32,7 @@ import se.uu.ub.cora.data.converter.JsonToDataConverterProvider;
 import se.uu.ub.cora.json.parser.JsonValue;
 import se.uu.ub.cora.storage.RecordNotFoundException;
 import se.uu.ub.cora.storage.RecordStorage;
+import se.uu.ub.cora.storage.StorageReadResult;
 
 public class DatabaseRecordStorageTest {
 
@@ -33,10 +40,12 @@ public class DatabaseRecordStorageTest {
 	private SqlDatabaseFactorySpy sqlDatabaseFactorySpy;
 	private JsonParserSpy jsonParserSpy;
 	private JsonToDataConverterFactorySpy factoryCreatorSpy;
+	private DataGroup emptyFilterSpy;
 
 	@BeforeMethod
 	public void beforeMethod() {
 
+		emptyFilterSpy = new DataGroupSpy();
 		factoryCreatorSpy = new JsonToDataConverterFactorySpy();
 		JsonToDataConverterProvider.setJsonToDataConverterFactory(factoryCreatorSpy);
 		sqlDatabaseFactorySpy = new SqlDatabaseFactorySpy();
@@ -56,8 +65,7 @@ public class DatabaseRecordStorageTest {
 		storage.read("someType", "someId");
 
 		sqlDatabaseFactorySpy.MCR.assertParameters("factorTableQuery", 0, "someType");
-		TableQuerySpy tableQuerySpy = (TableQuerySpy) sqlDatabaseFactorySpy.MCR
-				.getReturnValue("factorTableQuery", 0);
+		TableQuerySpy tableQuerySpy = getFirstFactoredTableQuery();
 
 		tableQuerySpy.MCR.assertParameters("addCondition", 0, "id", "someId");
 
@@ -65,16 +73,28 @@ public class DatabaseRecordStorageTest {
 		tableFacadeSpy.MCR.assertParameters("readOneRowForQuery", 0, tableQuerySpy);
 	}
 
+	private TableQuerySpy getFirstFactoredTableQuery() {
+		return (TableQuerySpy) sqlDatabaseFactorySpy.MCR.getReturnValue("factorTableQuery", 0);
+	}
+
 	private TableFacadeSpy getFirstFactoredTableFacadeSpy() {
 		return (TableFacadeSpy) sqlDatabaseFactorySpy.MCR.getReturnValue("factorTableFacade", 0);
 	}
 
-	@Test(expectedExceptions = RecordNotFoundException.class, expectedExceptionsMessageRegExp = ""
-			+ "No record found for recordType: someType with id: someId")
+	@Test
 	public void testReadTypeNotFound() throws Exception {
 		sqlDatabaseFactorySpy.throwExceptionFromTableFacadeOnRead = true;
+		try {
+			storage.read("someType", "someId");
+			makeSureErrorIsThrownFromAboveStatements();
 
-		storage.read("someType", "someId");
+		} catch (Exception e) {
+			assertTrue(e instanceof RecordNotFoundException);
+			assertEquals(e.getMessage(),
+					"No record found for recordType: someType with id: someId");
+			assertEquals(e.getCause().getMessage(), "Error from readOneRowForQuery in tablespy");
+		}
+
 	}
 
 	@Test
@@ -85,30 +105,111 @@ public class DatabaseRecordStorageTest {
 		DataGroup readValueFromStorage = storage.read(recordType, id);
 
 		TableFacadeSpy tableFacadeSpy = getFirstFactoredTableFacadeSpy();
+
 		RowSpy readRow = (RowSpy) tableFacadeSpy.MCR.getReturnValue("readOneRowForQuery", 0);
 
-		readRow.MCR.assertParameters("getValueByColumn", 0, "dataRecord");
-
-		Object dataRecord = readRow.MCR.getReturnValue("getValueByColumn", 0);
-
-		// go on...
-		jsonParserSpy.MCR.assertParameters("parseString", 0, dataRecord);
-		JsonValue jsonValue = (JsonValue) jsonParserSpy.MCR.getReturnValue("parseString", 0);
-
-		factoryCreatorSpy.MCR.assertParameters("createForJsonObject", 0, jsonValue);
-		JsonToDataConverterSpy jsonToDataConverterSpy = (JsonToDataConverterSpy) factoryCreatorSpy.MCR
-				.getReturnValue("createForJsonObject", 0);
-
-		jsonToDataConverterSpy.MCR.assertReturn("toInstance", 0, readValueFromStorage);
+		assertRowToDataGroupConvertion(0, readRow, readValueFromStorage);
 	}
 
 	@Test
 	public void testReadListTableFacadeFactoredAndCloseCalled() throws Exception {
-		DataGroup filterSpy = new DataGroupSpy();
 
-		storage.readList("someType", filterSpy);
+		storage.readList("someType", emptyFilterSpy);
 
 		TableFacadeSpy tableFacadeSpy = getFirstFactoredTableFacadeSpy();
 		tableFacadeSpy.MCR.assertMethodWasCalled("close");
 	}
+
+	@Test
+	public void testReadListTypeNotFound() throws Exception {
+		sqlDatabaseFactorySpy.throwExceptionFromTableFacadeOnRead = true;
+		try {
+			storage.readList("someType", emptyFilterSpy);
+			makeSureErrorIsThrownFromAboveStatements();
+		} catch (Exception e) {
+			assertTrue(e instanceof RecordNotFoundException);
+			assertEquals(e.getMessage(), "No records found for recordType: someType");
+			assertEquals(e.getCause().getMessage(), "Error from readRowsForQuery in tablespy");
+		}
+	}
+
+	private void makeSureErrorIsThrownFromAboveStatements() {
+		assertTrue(false);
+	}
+
+	@Test
+	public void testReadListTableQueryFactoredAndTableFacadeCalled() throws Exception {
+
+		storage.readList("someType", emptyFilterSpy);
+
+		sqlDatabaseFactorySpy.MCR.assertParameters("factorTableQuery", 0, "someType");
+		TableQuerySpy tableQuerySpy = getFirstFactoredTableQuery();
+
+		TableFacadeSpy tableFacadeSpy = getFirstFactoredTableFacadeSpy();
+		tableFacadeSpy.MCR.assertParameters("readRowsForQuery", 0, tableQuerySpy);
+
+	}
+
+	@Test
+	public void testReadListReturnsAStorageReadResult() throws Exception {
+
+		StorageReadResult result = storage.readList("someType", emptyFilterSpy);
+
+		assertNotNull(result);
+		assertEquals(result.start, 0);
+		assertEquals(result.totalNumberOfMatches, 3);
+		assertEquals(result.listOfDataGroups.size(), 3);
+	}
+
+	@Test
+	public void testName() throws Exception {
+		StorageReadResult result = storage.readList("someType", emptyFilterSpy);
+
+		TableFacadeSpy tableFacadeSpy = getFirstFactoredTableFacadeSpy();
+		List<RowSpy> readRows = (List) tableFacadeSpy.MCR.getReturnValue("readRowsForQuery", 0);
+
+		for (int i = 0; i < readRows.size(); i++) {
+			assertRowToDataGroupConvertionForOneRow(result, readRows, i);
+		}
+
+	}
+
+	private void assertRowToDataGroupConvertionForOneRow(StorageReadResult result,
+			List<RowSpy> readRows, int i) {
+		RowSpy readRow = readRows.get(i);
+		DataGroup readValueFromStorage = result.listOfDataGroups.get(i);
+
+		assertRowToDataGroupConvertion(i, readRow, readValueFromStorage);
+	}
+
+	private void assertRowToDataGroupConvertion(int callNumber, RowSpy readRow,
+			DataGroup readValueFromStorage) {
+		assertGetValueByColumnParameters(readRow);
+		assertParseStringParameters(callNumber, readRow);
+		assertcreateForJsonObjectParameters(callNumber);
+		assertToInstanceParameters(callNumber, readValueFromStorage);
+	}
+
+	private void assertParseStringParameters(int callNumber, RowSpy readRow) {
+		Object dataRecord = readRow.MCR.getReturnValue("getValueByColumn", 0);
+		jsonParserSpy.MCR.assertParameters("parseString", callNumber, dataRecord);
+	}
+
+	private void assertGetValueByColumnParameters(RowSpy readRow) {
+		readRow.MCR.assertMethodWasCalled("getValueByColumn");
+		readRow.MCR.assertParameters("getValueByColumn", 0, "dataRecord");
+	}
+
+	private void assertcreateForJsonObjectParameters(int callNumber) {
+		JsonValue jsonValue = (JsonValue) jsonParserSpy.MCR.getReturnValue("parseString",
+				callNumber);
+		factoryCreatorSpy.MCR.assertParameters("createForJsonObject", callNumber, jsonValue);
+	}
+
+	private void assertToInstanceParameters(int callNumber, DataGroup readValueFromStorage) {
+		JsonToDataConverterSpy jsonToDataConverterSpy = (JsonToDataConverterSpy) factoryCreatorSpy.MCR
+				.getReturnValue("createForJsonObject", callNumber);
+		jsonToDataConverterSpy.MCR.assertReturn("toInstance", 0, readValueFromStorage);
+	}
+
 }

@@ -18,6 +18,7 @@
  */
 package se.uu.ub.cora.sqlstorage;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import se.uu.ub.cora.sqldatabase.Row;
@@ -37,21 +38,32 @@ public class TableFacadeSpy implements TableFacade {
 
 	@Override
 	public void insertRowUsingQuery(TableQuery tableQuery) {
-		// TODO Auto-generated method stub
-
+		MCR.addCall("tableQuery", tableQuery);
 	}
 
 	@Override
 	public List<Row> readRowsForQuery(TableQuery tableQuery) {
-		// TODO Auto-generated method stub
-		return null;
+		MCR.addCall("tableQuery", tableQuery);
+		if (throwExceptionOnRead) {
+			throw SqlDatabaseException.withMessage("Error from readRowsForQuery in tablespy");
+		}
+		RowSpy result = new RowSpy();
+		RowSpy result2 = new RowSpy();
+		RowSpy result3 = new RowSpy();
+		List<Row> listResult = new ArrayList<>();
+		listResult.add(result);
+		listResult.add(result2);
+		listResult.add(result3);
+
+		MCR.addReturned(listResult);
+		return listResult;
 	}
 
 	@Override
 	public Row readOneRowForQuery(TableQuery tableQuery) {
 		MCR.addCall("tableQuery", tableQuery);
 		if (throwExceptionOnRead) {
-			throw SqlDatabaseException.withMessage("Error from spy");
+			throw SqlDatabaseException.withMessage("Error from readOneRowForQuery in tablespy");
 		}
 		RowSpy result = new RowSpy();
 
@@ -61,43 +73,41 @@ public class TableFacadeSpy implements TableFacade {
 
 	@Override
 	public long readNumberOfRows(TableQuery tableQuery) {
+		MCR.addCall("tableQuery", tableQuery);
 		// TODO Auto-generated method stub
 		return 0;
 	}
 
 	@Override
 	public void updateRowsUsingQuery(TableQuery tableQuery) {
-		// TODO Auto-generated method stub
-
+		MCR.addCall("tableQuery", tableQuery);
 	}
 
 	@Override
 	public void deleteRowsForQuery(TableQuery tableQuery) {
-		// TODO Auto-generated method stub
-
+		MCR.addCall("tableQuery", tableQuery);
 	}
 
 	@Override
 	public long nextValueFromSequence(String sequenceName) {
-		// TODO Auto-generated method stub
-		return 0;
+		MCR.addCall("sequenceName", sequenceName);
+		long result = 0L;
+		MCR.addReturned(result);
+		return result;
 	}
 
 	@Override
 	public void startTransaction() {
-		// TODO Auto-generated method stub
-
+		MCR.addCall();
 	}
 
 	@Override
 	public void endTransaction() {
-		// TODO Auto-generated method stub
-
+		MCR.addCall();
 	}
 
 	@Override
 	public void rollback() {
-		// TODO Auto-generated method stub
-
+		MCR.addCall();
 	}
 }

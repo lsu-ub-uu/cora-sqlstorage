@@ -43,7 +43,12 @@ public class RowSpy implements Row {
 	@Override
 	public boolean hasColumn(String columnName) {
 		MCR.addCall("columnName", columnName);
+		return false;
+	}
 
+	@Override
+	public boolean hasColumnWithNonEmptyValue(String columnName) {
+		MCR.addCall("columnName", columnName);
 		return false;
 	}
 
