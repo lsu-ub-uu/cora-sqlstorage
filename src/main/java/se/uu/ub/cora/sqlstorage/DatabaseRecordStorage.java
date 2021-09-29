@@ -89,7 +89,7 @@ public class DatabaseRecordStorage implements RecordStorage {
 	}
 
 	@Override
-	public void create(String type, String id, DataGroup record, DataGroup collectedTerms,
+	public void create(String type, String id, DataGroup dataRecord, DataGroup collectedTerms,
 			DataGroup linkList, String dataDivider) {
 		// TODO Auto-generated method stub
 
@@ -108,7 +108,7 @@ public class DatabaseRecordStorage implements RecordStorage {
 	}
 
 	@Override
-	public void update(String type, String id, DataGroup record, DataGroup collectedTerms,
+	public void update(String type, String id, DataGroup dataRecord, DataGroup collectedTerms,
 			DataGroup linkList, String dataDivider) {
 		// TODO Auto-generated method stub
 
@@ -159,7 +159,7 @@ public class DatabaseRecordStorage implements RecordStorage {
 	}
 
 	private StorageReadResult convertRowsToListOfDataGroups(List<Row> readRows) {
-		StorageReadResult storageReadResult = createStorageReadResultForRows(readRows);
+		StorageReadResult storageReadResult = new StorageReadResult();
 		convertAndAddRowToResult(readRows, storageReadResult);
 		return storageReadResult;
 	}
@@ -170,11 +170,6 @@ public class DatabaseRecordStorage implements RecordStorage {
 			dataGroups.add(convertRowToDataGroup(row));
 		}
 		storageReadResult.listOfDataGroups = dataGroups;
-	}
-
-	private StorageReadResult createStorageReadResultForRows(List<Row> readRows) {
-		StorageReadResult storageReadResult = new StorageReadResult();
-		return storageReadResult;
 	}
 
 	@Override
