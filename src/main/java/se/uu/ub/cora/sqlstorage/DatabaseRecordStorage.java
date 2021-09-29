@@ -119,14 +119,17 @@ public class DatabaseRecordStorage implements RecordStorage {
 		try (TableFacade tableFacade = sqlDatabaseFactory.factorTableFacade()) {
 			return readAndConvertDataList(type, tableFacade, filter);
 		} catch (SqlDatabaseException e) {
-			throw new RecordNotFoundException("No records found for recordType: " + type, e);
+			throw new RecordNotFoundException("RecordType: " + type + ", not found in storage.", e);
 		}
 	}
 
 	private StorageReadResult readAndConvertDataList(String type, TableFacade tableFacade,
 			DataGroup filter) {
 		List<Row> readRows = readRowsFromDatabase(type, tableFacade, filter);
-		return convertRowsToListOfDataGroups(readRows);
+		long totalNumberOfMatches = readNumberForTypeAndFilter(type, filter, tableFacade);
+		StorageReadResult readResult = convertRowsToListOfDataGroups(readRows);
+		readResult.totalNumberOfMatches = totalNumberOfMatches;
+		return readResult;
 	}
 
 	private List<Row> readRowsFromDatabase(String type, TableFacade tableFacade, DataGroup filter) {
@@ -171,7 +174,6 @@ public class DatabaseRecordStorage implements RecordStorage {
 
 	private StorageReadResult createStorageReadResultForRows(List<Row> readRows) {
 		StorageReadResult storageReadResult = new StorageReadResult();
-		storageReadResult.totalNumberOfMatches = readRows.size();
 		return storageReadResult;
 	}
 
@@ -202,8 +204,26 @@ public class DatabaseRecordStorage implements RecordStorage {
 
 	@Override
 	public long getTotalNumberOfRecordsForType(String type, DataGroup filter) {
-		// TODO Auto-generated method stub
-		return 0;
+		try (TableFacade tableFacade = sqlDatabaseFactory.factorTableFacade()) {
+			return readNumberForTypeAndFilter(type, filter, tableFacade);
+		} catch (SqlDatabaseException e) {
+			throw new RecordNotFoundException("RecordType: " + type + ", not found in storage.", e);
+		}
+	}
+
+	private long readNumberForTypeAndFilter(String type, DataGroup filter,
+			TableFacade tableFacade) {
+		return readFromDatabaseForTypeAndFilter(type, filter, tableFacade);
+	}
+
+	private long readFromDatabaseForTypeAndFilter(String type, DataGroup filter,
+			TableFacade tableFacade) {
+		TableQuery tableQuery = assembleCountQuery(type, filter);
+		return tableFacade.readNumberOfRows(tableQuery);
+	}
+
+	private TableQuery assembleCountQuery(String type, DataGroup filter) {
+		return sqlDatabaseFactory.factorTableQuery(type);
 	}
 
 	@Override

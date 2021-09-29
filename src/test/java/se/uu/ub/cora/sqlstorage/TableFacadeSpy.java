@@ -30,6 +30,7 @@ import se.uu.ub.cora.testutils.mcr.MethodCallRecorder;
 public class TableFacadeSpy implements TableFacade {
 	MethodCallRecorder MCR = new MethodCallRecorder();
 	public boolean throwExceptionOnRead = false;
+	public long totalNumberOfRecordsForType = 0;;
 
 	@Override
 	public void close() {
@@ -74,8 +75,11 @@ public class TableFacadeSpy implements TableFacade {
 	@Override
 	public long readNumberOfRows(TableQuery tableQuery) {
 		MCR.addCall("tableQuery", tableQuery);
-		// TODO Auto-generated method stub
-		return 0;
+		if (throwExceptionOnRead) {
+			throw SqlDatabaseException.withMessage("Error from readNumberOfRows in tablespy");
+		}
+		MCR.addReturned(totalNumberOfRecordsForType);
+		return totalNumberOfRecordsForType;
 	}
 
 	@Override

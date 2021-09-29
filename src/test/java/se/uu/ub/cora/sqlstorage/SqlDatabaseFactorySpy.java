@@ -28,6 +28,7 @@ import se.uu.ub.cora.testutils.mcr.MethodCallRecorder;
 public class SqlDatabaseFactorySpy implements SqlDatabaseFactory {
 	MethodCallRecorder MCR = new MethodCallRecorder();
 	boolean throwExceptionFromTableFacadeOnRead = false;
+	public long totalNumberOfRecordsForType = 0;
 
 	@Override
 	public DatabaseFacade factorDatabaseFacade() {
@@ -40,6 +41,7 @@ public class SqlDatabaseFactorySpy implements SqlDatabaseFactory {
 		MCR.addCall();
 		TableFacadeSpy tableFacadeSpy = new TableFacadeSpy();
 		tableFacadeSpy.throwExceptionOnRead = throwExceptionFromTableFacadeOnRead;
+		tableFacadeSpy.totalNumberOfRecordsForType = totalNumberOfRecordsForType;
 		MCR.addReturned(tableFacadeSpy);
 		return tableFacadeSpy;
 	}

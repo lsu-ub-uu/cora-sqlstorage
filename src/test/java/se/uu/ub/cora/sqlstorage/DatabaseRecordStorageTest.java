@@ -95,7 +95,6 @@ public class DatabaseRecordStorageTest {
 					"No record found for recordType: someType with id: someId");
 			assertEquals(e.getCause().getMessage(), "Error from readOneRowForQuery in tablespy");
 		}
-
 	}
 
 	@Test
@@ -129,7 +128,7 @@ public class DatabaseRecordStorageTest {
 			makeSureErrorIsThrownFromAboveStatements();
 		} catch (Exception e) {
 			assertTrue(e instanceof RecordNotFoundException);
-			assertEquals(e.getMessage(), "No records found for recordType: someType");
+			assertEquals(e.getMessage(), "RecordType: someType, not found in storage.");
 			assertEquals(e.getCause().getMessage(), "Error from readRowsForQuery in tablespy");
 		}
 	}
@@ -153,6 +152,7 @@ public class DatabaseRecordStorageTest {
 
 	@Test
 	public void testReadListReturnsAStorageReadResult() throws Exception {
+		sqlDatabaseFactorySpy.totalNumberOfRecordsForType = 3;
 
 		StorageReadResult result = storage.readList("someType", emptyFilterSpy);
 
@@ -240,23 +240,68 @@ public class DatabaseRecordStorageTest {
 
 	@Test
 	public void testReadListWithFromNoInFilter() throws Exception {
+		sqlDatabaseFactorySpy.totalNumberOfRecordsForType = 747;
 		filterSpy.fromNo = "10";
-		storage.readList("someType", filterSpy);
+		StorageReadResult result = storage.readList("someType", filterSpy);
 
 		TableQuerySpy tableQuerySpy = getFirstFactoredTableQuery();
 
 		tableQuerySpy.MCR.assertParameters("setFromNo", 0, 10L);
 		tableQuerySpy.MCR.assertMethodNotCalled("setToNo");
+
+		assertEquals(result.start, 0);
+		assertEquals(result.totalNumberOfMatches, 747);
+		assertEquals(result.listOfDataGroups.size(), 3);
 	}
 
 	@Test
 	public void testReadListWithToNoInFilter() throws Exception {
-		filterSpy.toNo = "100";
-		storage.readList("someType", filterSpy);
+		sqlDatabaseFactorySpy.totalNumberOfRecordsForType = 747;
+		filterSpy.toNo = "3";
+		StorageReadResult result = storage.readList("someType", filterSpy);
 
 		TableQuerySpy tableQuerySpy = getFirstFactoredTableQuery();
 
 		tableQuerySpy.MCR.assertMethodNotCalled("setFromNo");
-		tableQuerySpy.MCR.assertParameters("setToNo", 0, 100L);
+		assertEquals(result.totalNumberOfMatches, 747);
+		tableQuerySpy.MCR.assertParameters("setToNo", 0, 3L);
+	}
+
+	@Test
+	public void testGetTotalNumberOfRecordsForTypeTableFacadeFactoredAndCloseCalled()
+			throws Exception {
+		storage.getTotalNumberOfRecordsForType("somType", emptyFilterSpy);
+
+		TableFacadeSpy tableFacadeSpy = getFirstFactoredTableFacadeSpy();
+		tableFacadeSpy.MCR.assertMethodWasCalled("close");
+	}
+
+	@Test
+	public void testGetTotalNumberOfRecordsForTypeNotFound() throws Exception {
+		sqlDatabaseFactorySpy.throwExceptionFromTableFacadeOnRead = true;
+		try {
+			storage.getTotalNumberOfRecordsForType("someType", emptyFilterSpy);
+			makeSureErrorIsThrownFromAboveStatements();
+
+		} catch (Exception e) {
+			assertTrue(e instanceof RecordNotFoundException);
+			assertEquals(e.getMessage(), "RecordType: someType, not found in storage.");
+			assertEquals(e.getCause().getMessage(), "Error from readNumberOfRows in tablespy");
+		}
+	}
+
+	@Test
+	public void testGetTotalNumberOfRecordsForType() throws Exception {
+		sqlDatabaseFactorySpy.totalNumberOfRecordsForType = 747;
+
+		long count = storage.getTotalNumberOfRecordsForType("somType", emptyFilterSpy);
+
+		TableQuerySpy tableQuerySpy = getFirstFactoredTableQuery();
+		TableFacadeSpy tableFacadeSpy = getFirstFactoredTableFacadeSpy();
+
+		tableFacadeSpy.MCR.assertParameters("readNumberOfRows", 0, tableQuerySpy);
+		tableFacadeSpy.MCR.assertReturn("readNumberOfRows", 0, count);
+		assertEquals(count, 747);
+
 	}
 }
