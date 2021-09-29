@@ -41,10 +41,11 @@ public class DatabaseRecordStorageTest {
 	private JsonParserSpy jsonParserSpy;
 	private JsonToDataConverterFactorySpy factoryCreatorSpy;
 	private DataGroup emptyFilterSpy;
+	private FilterDataGroupSpy filterSpy;
 
 	@BeforeMethod
 	public void beforeMethod() {
-
+		filterSpy = new FilterDataGroupSpy();
 		emptyFilterSpy = new DataGroupSpy();
 		factoryCreatorSpy = new JsonToDataConverterFactorySpy();
 		JsonToDataConverterProvider.setJsonToDataConverterFactory(factoryCreatorSpy);
@@ -162,7 +163,7 @@ public class DatabaseRecordStorageTest {
 	}
 
 	@Test
-	public void testName() throws Exception {
+	public void testRealListRowToDataConvertion() throws Exception {
 		StorageReadResult result = storage.readList("someType", emptyFilterSpy);
 
 		TableFacadeSpy tableFacadeSpy = getFirstFactoredTableFacadeSpy();
@@ -212,4 +213,50 @@ public class DatabaseRecordStorageTest {
 		jsonToDataConverterSpy.MCR.assertReturn("toInstance", 0, readValueFromStorage);
 	}
 
+	@Test
+	public void testReadListWithFromNoAndToNoInFilter() throws Exception {
+		filterSpy.fromNo = "1";
+		filterSpy.toNo = "10";
+		storage.readList("someType", filterSpy);
+
+		TableQuerySpy tableQuerySpy = getFirstFactoredTableQuery();
+
+		tableQuerySpy.MCR.assertParameters("setFromNo", 0, 1L);
+		tableQuerySpy.MCR.assertParameters("setToNo", 0, 10L);
+
+	}
+
+	@Test
+	public void testReadListWithFromNoAndToNoInFilterHigher() throws Exception {
+		filterSpy.fromNo = "10";
+		filterSpy.toNo = "100";
+		storage.readList("someType", filterSpy);
+
+		TableQuerySpy tableQuerySpy = getFirstFactoredTableQuery();
+
+		tableQuerySpy.MCR.assertParameters("setFromNo", 0, 10L);
+		tableQuerySpy.MCR.assertParameters("setToNo", 0, 100L);
+	}
+
+	@Test
+	public void testReadListWithFromNoInFilter() throws Exception {
+		filterSpy.fromNo = "10";
+		storage.readList("someType", filterSpy);
+
+		TableQuerySpy tableQuerySpy = getFirstFactoredTableQuery();
+
+		tableQuerySpy.MCR.assertParameters("setFromNo", 0, 10L);
+		tableQuerySpy.MCR.assertMethodNotCalled("setToNo");
+	}
+
+	@Test
+	public void testReadListWithToNoInFilter() throws Exception {
+		filterSpy.toNo = "100";
+		storage.readList("someType", filterSpy);
+
+		TableQuerySpy tableQuerySpy = getFirstFactoredTableQuery();
+
+		tableQuerySpy.MCR.assertMethodNotCalled("setFromNo");
+		tableQuerySpy.MCR.assertParameters("setToNo", 0, 100L);
+	}
 }

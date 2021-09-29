@@ -117,24 +117,42 @@ public class DatabaseRecordStorage implements RecordStorage {
 	@Override
 	public StorageReadResult readList(String type, DataGroup filter) {
 		try (TableFacade tableFacade = sqlDatabaseFactory.factorTableFacade()) {
-			return readAndConvertDataList(type, tableFacade);
+			return readAndConvertDataList(type, tableFacade, filter);
 		} catch (SqlDatabaseException e) {
 			throw new RecordNotFoundException("No records found for recordType: " + type, e);
 		}
 	}
 
-	private StorageReadResult readAndConvertDataList(String type, TableFacade tableFacade) {
-		List<Row> readRows = readRowsFromDatabase(type, tableFacade);
+	private StorageReadResult readAndConvertDataList(String type, TableFacade tableFacade,
+			DataGroup filter) {
+		List<Row> readRows = readRowsFromDatabase(type, tableFacade, filter);
 		return convertRowsToListOfDataGroups(readRows);
 	}
 
-	private List<Row> readRowsFromDatabase(String type, TableFacade tableFacade) {
-		TableQuery tableQuery = assembleReadRowsQuery(type);
+	private List<Row> readRowsFromDatabase(String type, TableFacade tableFacade, DataGroup filter) {
+		TableQuery tableQuery = assembleReadRowsQuery(type, filter);
 		return tableFacade.readRowsForQuery(tableQuery);
 	}
 
-	private TableQuery assembleReadRowsQuery(String type) {
-		return sqlDatabaseFactory.factorTableQuery(type);
+	private void possiblySetToNoInQueryFromFilter(TableQuery tableQuery, DataGroup filter) {
+		if (filter.containsChildWithNameInData("toNo")) {
+			String toNo = filter.getFirstAtomicValueWithNameInData("toNo");
+			tableQuery.setToNo(Long.parseLong(toNo));
+		}
+	}
+
+	private void possiblySetFromNoInQueryFromFilter(TableQuery tableQuery, DataGroup filter) {
+		if (filter.containsChildWithNameInData("fromNo")) {
+			String fromNo = filter.getFirstAtomicValueWithNameInData("fromNo");
+			tableQuery.setFromNo(Long.parseLong(fromNo));
+		}
+	}
+
+	private TableQuery assembleReadRowsQuery(String type, DataGroup filter) {
+		TableQuery tableQuery = sqlDatabaseFactory.factorTableQuery(type);
+		possiblySetFromNoInQueryFromFilter(tableQuery, filter);
+		possiblySetToNoInQueryFromFilter(tableQuery, filter);
+		return tableQuery;
 	}
 
 	private StorageReadResult convertRowsToListOfDataGroups(List<Row> readRows) {

@@ -20,26 +20,22 @@ public class TableQuerySpy implements TableQuery {
 
 	@Override
 	public void setFromNo(Long fromNo) {
-		// TODO Auto-generated method stub
-
+		MCR.addCall("fromNo", fromNo);
 	}
 
 	@Override
 	public void setToNo(Long toNo) {
-		// TODO Auto-generated method stub
-
+		MCR.addCall("toNo", toNo);
 	}
 
 	@Override
 	public void addOrderByAsc(String column) {
-		// TODO Auto-generated method stub
-
+		MCR.addCall("column", column);
 	}
 
 	@Override
 	public void addOrderByDesc(String column) {
-		// TODO Auto-generated method stub
-
+		MCR.addCall("column", column);
 	}
 
 	@Override
