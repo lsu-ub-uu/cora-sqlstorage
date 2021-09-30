@@ -1,5 +1,5 @@
 /*
- * Copyright 2017 Olov McKie
+ * Copyright 2021 Uppsala University Library
  *
  * This file is part of Cora.
  *
@@ -18,16 +18,22 @@
  */
 package se.uu.ub.cora.sqlstorage;
 
-public class SqlStorageException extends RuntimeException {
+import se.uu.ub.cora.data.converter.DataToJsonConverterFactory;
+import se.uu.ub.cora.data.converter.DataToJsonConverterFactoryCreator;
+import se.uu.ub.cora.testutils.mcr.MethodCallRecorder;
 
-	private static final long serialVersionUID = 1L;
+public class DataToJsonConverterFactoryCreatorSpy implements DataToJsonConverterFactoryCreator {
 
-	private SqlStorageException(String message) {
-		super(message);
-	}
+	DataToJsonConverterFactory dataToJsonConverterFactory = new DataToJsonConverterFactorySpy();
 
-	public static SqlStorageException withMessage(String message) {
-		return new SqlStorageException(message);
+	MethodCallRecorder MCR = new MethodCallRecorder();
+
+	@Override
+	public DataToJsonConverterFactory createFactory() {
+		MCR.addCall();
+
+		MCR.addReturned(dataToJsonConverterFactory);
+		return dataToJsonConverterFactory;
 	}
 
 }

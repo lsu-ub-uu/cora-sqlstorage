@@ -23,15 +23,20 @@ import java.util.Collection;
 import java.util.List;
 
 import se.uu.ub.cora.data.DataGroup;
+import se.uu.ub.cora.data.converter.DataToJsonConverter;
+import se.uu.ub.cora.data.converter.DataToJsonConverterFactory;
+import se.uu.ub.cora.data.converter.DataToJsonConverterProvider;
 import se.uu.ub.cora.data.converter.JsonToDataConverter;
 import se.uu.ub.cora.data.converter.JsonToDataConverterProvider;
 import se.uu.ub.cora.json.parser.JsonParser;
 import se.uu.ub.cora.json.parser.JsonValue;
 import se.uu.ub.cora.sqldatabase.Row;
+import se.uu.ub.cora.sqldatabase.SqlConflictException;
 import se.uu.ub.cora.sqldatabase.SqlDatabaseException;
 import se.uu.ub.cora.sqldatabase.SqlDatabaseFactory;
 import se.uu.ub.cora.sqldatabase.table.TableFacade;
 import se.uu.ub.cora.sqldatabase.table.TableQuery;
+import se.uu.ub.cora.storage.RecordConflictException;
 import se.uu.ub.cora.storage.RecordNotFoundException;
 import se.uu.ub.cora.storage.RecordStorage;
 import se.uu.ub.cora.storage.StorageReadResult;
@@ -41,10 +46,13 @@ import se.uu.ub.cora.storage.StorageReadResult;
  * database schema to store records and metadata in the standard Cora JSON format. The database has
  * one table for each recordType. The tables consist of two columns id and dataRecord with the
  * record stored in JSON format.
+ * <p>
+ * This implementation of RecordStorage is threadsafe.
  */
 public class DatabaseRecordStorage implements RecordStorage {
 
 	private static final String ID_COLUMN = "id";
+	private static final String DATA_DIVIDER_COLUMN = "dataDivider";
 	private static final String DATA_RECORD_COLUMN = "dataRecord";
 	private SqlDatabaseFactory sqlDatabaseFactory;
 	private JsonParser jsonParser;
@@ -91,8 +99,35 @@ public class DatabaseRecordStorage implements RecordStorage {
 	@Override
 	public void create(String type, String id, DataGroup dataRecord, DataGroup collectedTerms,
 			DataGroup linkList, String dataDivider) {
-		// TODO Auto-generated method stub
+		try (TableFacade tableFacade = sqlDatabaseFactory.factorTableFacade()) {
+			String dataRecordJson = convertDataGroupToJsonString(dataRecord);
+			TableQuery tableQuery = assembleCreateQuery(type, id, dataDivider, dataRecordJson);
+			tableFacade.insertRowUsingQuery(tableQuery);
+		} catch (SqlConflictException e) {
+			throw RecordConflictException.withMessageAndException(
+					"Record with type: " + type + ", and id: " + id + " already exists in storage.",
+					e);
+		}
+	}
 
+	private String convertDataGroupToJsonString(DataGroup dataGroup) {
+		DataToJsonConverter dataToJsonConverter = createDataGroupToJsonConvert(dataGroup);
+		return dataToJsonConverter.toJson();
+	}
+
+	private DataToJsonConverter createDataGroupToJsonConvert(DataGroup dataGroup) {
+		DataToJsonConverterFactory converterFactory = DataToJsonConverterProvider
+				.createImplementingFactory();
+		return converterFactory.factorUsingConvertible(dataGroup);
+	}
+
+	private TableQuery assembleCreateQuery(String type, String id, String dataDivider,
+			String dataRecord) {
+		TableQuery tableQuery = sqlDatabaseFactory.factorTableQuery(type);
+		tableQuery.addParameter(ID_COLUMN, id);
+		tableQuery.addParameter(DATA_DIVIDER_COLUMN, dataDivider);
+		tableQuery.addParameter(DATA_RECORD_COLUMN, dataRecord);
+		return tableQuery;
 	}
 
 	@Override

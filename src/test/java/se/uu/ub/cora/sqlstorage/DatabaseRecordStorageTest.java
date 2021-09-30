@@ -28,8 +28,10 @@ import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
 import se.uu.ub.cora.data.DataGroup;
+import se.uu.ub.cora.data.converter.DataToJsonConverterProvider;
 import se.uu.ub.cora.data.converter.JsonToDataConverterProvider;
 import se.uu.ub.cora.json.parser.JsonValue;
+import se.uu.ub.cora.storage.RecordConflictException;
 import se.uu.ub.cora.storage.RecordNotFoundException;
 import se.uu.ub.cora.storage.RecordStorage;
 import se.uu.ub.cora.storage.StorageReadResult;
@@ -42,13 +44,21 @@ public class DatabaseRecordStorageTest {
 	private JsonToDataConverterFactorySpy factoryCreatorSpy;
 	private DataGroup emptyFilterSpy;
 	private FilterDataGroupSpy filterSpy;
+	private DataGroup emptyCollectedTerms;
+	private DataGroup emptyLinkList;
+	private DataToJsonConverterFactoryCreatorSpy dataToJsonConverterFactoryCreatorSpy;
 
 	@BeforeMethod
 	public void beforeMethod() {
 		filterSpy = new FilterDataGroupSpy();
 		emptyFilterSpy = new DataGroupSpy();
+		emptyCollectedTerms = new DataGroupSpy();
+		emptyLinkList = new DataGroupSpy();
 		factoryCreatorSpy = new JsonToDataConverterFactorySpy();
 		JsonToDataConverterProvider.setJsonToDataConverterFactory(factoryCreatorSpy);
+		dataToJsonConverterFactoryCreatorSpy = new DataToJsonConverterFactoryCreatorSpy();
+		DataToJsonConverterProvider
+				.setDataToJsonConverterFactoryCreator(dataToJsonConverterFactoryCreatorSpy);
 		sqlDatabaseFactorySpy = new SqlDatabaseFactorySpy();
 		jsonParserSpy = new JsonParserSpy();
 		storage = new DatabaseRecordStorage(sqlDatabaseFactorySpy, jsonParserSpy);
@@ -302,6 +312,75 @@ public class DatabaseRecordStorageTest {
 		tableFacadeSpy.MCR.assertParameters("readNumberOfRows", 0, tableQuerySpy);
 		tableFacadeSpy.MCR.assertReturn("readNumberOfRows", 0, count);
 		assertEquals(count, 747);
+	}
 
+	@Test
+	public void testCreateTableFacadeFactoredAndCloseCalled() throws Exception {
+		DataGroup dataRecord = new DataGroupSpy();
+		String someDataDivider = "someDataDivider";
+
+		storage.create("someType", "someId", dataRecord, emptyCollectedTerms, emptyLinkList,
+				someDataDivider);
+
+		TableFacadeSpy tableFacadeSpy = getFirstFactoredTableFacadeSpy();
+		tableFacadeSpy.MCR.assertMethodWasCalled("close");
+	}
+
+	@Test
+	public void testCreateParametersPassedOn() throws Exception {
+		DataGroup dataRecord = new DataGroupSpy();
+		String dataDivider = "someDataDivider";
+
+		String someType = "someType";
+		String someId = "someId";
+
+		storage.create(someType, someId, dataRecord, emptyCollectedTerms, emptyLinkList,
+				dataDivider);
+
+		String dataRecordJson = getConvertedJson(dataRecord);
+
+		sqlDatabaseFactorySpy.MCR.assertParameters("factorTableQuery", 0, someType);
+		TableQuerySpy tableQuerySpy = getFirstFactoredTableQuery();
+		tableQuerySpy.MCR.assertParameters("addParameter", 0, "id", someId);
+		tableQuerySpy.MCR.assertParameters("addParameter", 1, "dataDivider", dataDivider);
+		tableQuerySpy.MCR.assertParameters("addParameter", 2, "dataRecord", dataRecordJson);
+
+		TableFacadeSpy firstFactoredTableFacadeSpy = getFirstFactoredTableFacadeSpy();
+		firstFactoredTableFacadeSpy.MCR.assertParameters("insertRowUsingQuery", 0, tableQuerySpy);
+	}
+
+	private String getConvertedJson(DataGroup dataRecord) {
+		DataToJsonConverterFactorySpy dataToJsonConverterFactorySpy = (DataToJsonConverterFactorySpy) dataToJsonConverterFactoryCreatorSpy.MCR
+				.getReturnValue("createFactory", 0);
+
+		dataToJsonConverterFactorySpy.MCR.assertParameters("factorUsingConvertible", 0, dataRecord);
+
+		DataToJsonConverterSpy dataToJsonConeverterSpy = (DataToJsonConverterSpy) dataToJsonConverterFactorySpy.MCR
+				.getReturnValue("factorUsingConvertible", 0);
+
+		String dataRecordJson = (String) dataToJsonConeverterSpy.MCR.getReturnValue("toJson", 0);
+		return dataRecordJson;
+	}
+
+	@Test
+	public void testCreateThrowsRecordConflictException() throws Exception {
+		sqlDatabaseFactorySpy.throwDuplicateExceptionFromTableFacade = true;
+
+		DataGroup dataRecord = new DataGroupSpy();
+		String dataDivider = "someDataDivider";
+		String someType = "someType";
+		String someId = "someId";
+
+		try {
+			storage.create(someType, someId, dataRecord, emptyCollectedTerms, emptyLinkList,
+					dataDivider);
+			makeSureErrorIsThrownFromAboveStatements();
+		} catch (Exception e) {
+			assertTrue(e instanceof RecordConflictException);
+			assertEquals(e.getMessage(),
+					"Record with type: someType, and id: someId already exists in storage.");
+			assertEquals(e.getCause().getMessage(), "Error from insertRowUsingQuery in tablespy");
+
+		}
 	}
 }

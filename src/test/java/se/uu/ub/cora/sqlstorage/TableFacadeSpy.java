@@ -22,6 +22,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import se.uu.ub.cora.sqldatabase.Row;
+import se.uu.ub.cora.sqldatabase.SqlConflictException;
 import se.uu.ub.cora.sqldatabase.SqlDatabaseException;
 import se.uu.ub.cora.sqldatabase.table.TableFacade;
 import se.uu.ub.cora.sqldatabase.table.TableQuery;
@@ -30,7 +31,8 @@ import se.uu.ub.cora.testutils.mcr.MethodCallRecorder;
 public class TableFacadeSpy implements TableFacade {
 	MethodCallRecorder MCR = new MethodCallRecorder();
 	public boolean throwExceptionOnRead = false;
-	public long totalNumberOfRecordsForType = 0;;
+	public long totalNumberOfRecordsForType = 0;
+	public boolean throwDuplicateException = false;
 
 	@Override
 	public void close() {
@@ -40,6 +42,10 @@ public class TableFacadeSpy implements TableFacade {
 	@Override
 	public void insertRowUsingQuery(TableQuery tableQuery) {
 		MCR.addCall("tableQuery", tableQuery);
+		if (throwDuplicateException) {
+			throw SqlConflictException.withMessage("Error from insertRowUsingQuery in tablespy");
+		}
+
 	}
 
 	@Override
@@ -85,6 +91,10 @@ public class TableFacadeSpy implements TableFacade {
 	@Override
 	public void updateRowsUsingQuery(TableQuery tableQuery) {
 		MCR.addCall("tableQuery", tableQuery);
+
+		if (throwDuplicateException) {
+			throw SqlConflictException.withMessage("Error from updateRowsUsingQuery in tablespy");
+		}
 	}
 
 	@Override
