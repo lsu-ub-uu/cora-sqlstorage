@@ -47,6 +47,10 @@ public class DatabaseRecordStorageTest {
 	private DataGroup emptyCollectedTerms;
 	private DataGroup emptyLinkList;
 	private DataToJsonConverterFactoryCreatorSpy dataToJsonConverterFactoryCreatorSpy;
+	private DataGroup dataRecord;
+	private String dataDivider;
+	private String someType;
+	private String someId;
 
 	@BeforeMethod
 	public void beforeMethod() {
@@ -62,6 +66,12 @@ public class DatabaseRecordStorageTest {
 		sqlDatabaseFactorySpy = new SqlDatabaseFactorySpy();
 		jsonParserSpy = new JsonParserSpy();
 		storage = new DatabaseRecordStorage(sqlDatabaseFactorySpy, jsonParserSpy);
+
+		dataRecord = new DataGroupSpy();
+		dataDivider = "someDataDivider";
+
+		someType = "someType";
+		someId = "someId";
 	}
 
 	@Test
@@ -75,7 +85,7 @@ public class DatabaseRecordStorageTest {
 	public void testReadParametersAddedToTableQueryAndPassedOn() throws Exception {
 		storage.read("someType", "someId");
 
-		sqlDatabaseFactorySpy.MCR.assertParameters("factorTableQuery", 0, "someType");
+		sqlDatabaseFactorySpy.MCR.assertParameters("factorTableQuery", 0, "record_someType");
 		TableQuerySpy tableQuerySpy = getFirstFactoredTableQuery();
 
 		tableQuerySpy.MCR.assertParameters("addCondition", 0, "id", "someId");
@@ -152,7 +162,7 @@ public class DatabaseRecordStorageTest {
 
 		storage.readList("someType", emptyFilterSpy);
 
-		sqlDatabaseFactorySpy.MCR.assertParameters("factorTableQuery", 0, "someType");
+		sqlDatabaseFactorySpy.MCR.assertParameters("factorTableQuery", 0, "record_someType");
 		TableQuerySpy tableQuerySpy = getFirstFactoredTableQuery();
 
 		TableFacadeSpy tableFacadeSpy = getFirstFactoredTableFacadeSpy();
@@ -208,7 +218,7 @@ public class DatabaseRecordStorageTest {
 
 	private void assertGetValueByColumnParameters(RowSpy readRow) {
 		readRow.MCR.assertMethodWasCalled("getValueByColumn");
-		readRow.MCR.assertParameters("getValueByColumn", 0, "dataRecord");
+		readRow.MCR.assertParameters("getValueByColumn", 0, "record");
 	}
 
 	private void assertcreateForJsonObjectParameters(int callNumber) {
@@ -328,22 +338,17 @@ public class DatabaseRecordStorageTest {
 
 	@Test
 	public void testCreateParametersPassedOn() throws Exception {
-		DataGroup dataRecord = new DataGroupSpy();
-		String dataDivider = "someDataDivider";
-
-		String someType = "someType";
-		String someId = "someId";
 
 		storage.create(someType, someId, dataRecord, emptyCollectedTerms, emptyLinkList,
 				dataDivider);
 
 		String dataRecordJson = getConvertedJson(dataRecord);
 
-		sqlDatabaseFactorySpy.MCR.assertParameters("factorTableQuery", 0, someType);
+		sqlDatabaseFactorySpy.MCR.assertParameters("factorTableQuery", 0, "record_someType");
 		TableQuerySpy tableQuerySpy = getFirstFactoredTableQuery();
 		tableQuerySpy.MCR.assertParameters("addParameter", 0, "id", someId);
-		tableQuerySpy.MCR.assertParameters("addParameter", 1, "dataDivider", dataDivider);
-		tableQuerySpy.MCR.assertParameters("addParameter", 2, "dataRecord", dataRecordJson);
+		tableQuerySpy.MCR.assertParameters("addParameter", 1, "datadivider", dataDivider);
+		tableQuerySpy.MCR.assertParameters("addParameter", 2, "record", dataRecordJson);
 
 		TableFacadeSpy firstFactoredTableFacadeSpy = getFirstFactoredTableFacadeSpy();
 		firstFactoredTableFacadeSpy.MCR.assertParameters("insertRowUsingQuery", 0, tableQuerySpy);
@@ -366,11 +371,6 @@ public class DatabaseRecordStorageTest {
 	public void testCreateThrowsRecordConflictException() throws Exception {
 		sqlDatabaseFactorySpy.throwDuplicateExceptionFromTableFacade = true;
 
-		DataGroup dataRecord = new DataGroupSpy();
-		String dataDivider = "someDataDivider";
-		String someType = "someType";
-		String someId = "someId";
-
 		try {
 			storage.create(someType, someId, dataRecord, emptyCollectedTerms, emptyLinkList,
 					dataDivider);
@@ -383,4 +383,50 @@ public class DatabaseRecordStorageTest {
 
 		}
 	}
+
+	@Test
+	public void testUpdateClosed() throws Exception {
+
+		storage.update(someType, someId, dataRecord, emptyCollectedTerms, emptyLinkList,
+				dataDivider);
+		TableFacadeSpy tableFacadeSpy = getFirstFactoredTableFacadeSpy();
+		tableFacadeSpy.MCR.assertMethodWasCalled("close");
+
+	}
+
+	@Test
+	public void testUpdateParametersPassedOn() throws Exception {
+
+		storage.update(someType, someId, dataRecord, emptyCollectedTerms, emptyLinkList,
+				dataDivider);
+
+		String dataRecordJson = getConvertedJson(dataRecord);
+
+		sqlDatabaseFactorySpy.MCR.assertParameters("factorTableQuery", 0, "record_someType");
+		TableQuerySpy tableQuerySpy = getFirstFactoredTableQuery();
+		tableQuerySpy.MCR.assertParameters("addParameter", 0, "datadivider", dataDivider);
+		tableQuerySpy.MCR.assertParameters("addParameter", 1, "record", dataRecordJson);
+		tableQuerySpy.MCR.assertParameters("addCondition", 0, "id", someId);
+
+		TableFacadeSpy firstFactoredTableFacadeSpy = getFirstFactoredTableFacadeSpy();
+
+		firstFactoredTableFacadeSpy.MCR.assertParameters("updateRowsUsingQuery", 0, tableQuerySpy);
+	}
+
+	@Test
+	public void testUpdateTypeOrIdNotFound() throws Exception {
+		sqlDatabaseFactorySpy.throwExceptionFromTableFacadeOnUpdate = true;
+		try {
+			storage.update(someType, someId, dataRecord, emptyCollectedTerms, emptyLinkList,
+					dataDivider);
+			makeSureErrorIsThrownFromAboveStatements();
+
+		} catch (Exception e) {
+			assertTrue(e instanceof RecordNotFoundException);
+			assertEquals(e.getMessage(),
+					"No record found for recordType: someType with id: someId");
+			assertEquals(e.getCause().getMessage(), "Error from updateRowsUsingQuery in tablespy");
+		}
+	}
+
 }

@@ -44,16 +44,17 @@ import se.uu.ub.cora.storage.StorageReadResult;
 /**
  * DatabaseRecordStorage provides an implementation of {@link RecordStorage} using a standardized
  * database schema to store records and metadata in the standard Cora JSON format. The database has
- * one table for each recordType. The tables consist of two columns id and dataRecord with the
- * record stored in JSON format.
+ * one table for each recordType. The tables are named with a prefix "record_" and then the name of
+ * the record type, ie "record_nameoftherecordtype" and consist of three columns id, datadivider and
+ * dataRecord with the record stored in JSON format.
  * <p>
  * This implementation of RecordStorage is threadsafe.
  */
 public class DatabaseRecordStorage implements RecordStorage {
 
 	private static final String ID_COLUMN = "id";
-	private static final String DATA_DIVIDER_COLUMN = "dataDivider";
-	private static final String DATA_RECORD_COLUMN = "dataRecord";
+	private static final String DATA_DIVIDER_COLUMN = "datadivider";
+	private static final String DATA_RECORD_COLUMN = "record";
 	private SqlDatabaseFactory sqlDatabaseFactory;
 	private JsonParser jsonParser;
 
@@ -83,9 +84,13 @@ public class DatabaseRecordStorage implements RecordStorage {
 	}
 
 	private TableQuery assembleReadOneQuery(String type, String id) {
-		TableQuery tableQuery = sqlDatabaseFactory.factorTableQuery(type);
+		TableQuery tableQuery = factorTableQueryWithTablePrefix(type);
 		tableQuery.addCondition(ID_COLUMN, id);
 		return tableQuery;
+	}
+
+	private TableQuery factorTableQueryWithTablePrefix(String type) {
+		return sqlDatabaseFactory.factorTableQuery("record_" + type);
 	}
 
 	private DataGroup convertRowToDataGroup(Row readRow) {
@@ -123,7 +128,7 @@ public class DatabaseRecordStorage implements RecordStorage {
 
 	private TableQuery assembleCreateQuery(String type, String id, String dataDivider,
 			String dataRecord) {
-		TableQuery tableQuery = sqlDatabaseFactory.factorTableQuery(type);
+		TableQuery tableQuery = factorTableQueryWithTablePrefix(type);
 		tableQuery.addParameter(ID_COLUMN, id);
 		tableQuery.addParameter(DATA_DIVIDER_COLUMN, dataDivider);
 		tableQuery.addParameter(DATA_RECORD_COLUMN, dataRecord);
@@ -145,8 +150,23 @@ public class DatabaseRecordStorage implements RecordStorage {
 	@Override
 	public void update(String type, String id, DataGroup dataRecord, DataGroup collectedTerms,
 			DataGroup linkList, String dataDivider) {
-		// TODO Auto-generated method stub
+		try (TableFacade tableFacade = sqlDatabaseFactory.factorTableFacade()) {
+			String dataRecordJson = convertDataGroupToJsonString(dataRecord);
+			TableQuery tableQuery = assembleUpdateQuery(type, id, dataDivider, dataRecordJson);
+			tableFacade.updateRowsUsingQuery(tableQuery);
+		} catch (SqlDatabaseException e) {
+			throw new RecordNotFoundException(
+					"No record found for recordType: " + type + " with id: " + id, e);
+		}
+	}
 
+	private TableQuery assembleUpdateQuery(String type, String id, String dataDivider,
+			String dataRecord) {
+		TableQuery tableQuery = factorTableQueryWithTablePrefix(type);
+		tableQuery.addParameter(DATA_DIVIDER_COLUMN, dataDivider);
+		tableQuery.addParameter(DATA_RECORD_COLUMN, dataRecord);
+		tableQuery.addCondition(ID_COLUMN, id);
+		return tableQuery;
 	}
 
 	@Override
@@ -187,7 +207,7 @@ public class DatabaseRecordStorage implements RecordStorage {
 	}
 
 	private TableQuery assembleReadRowsQuery(String type, DataGroup filter) {
-		TableQuery tableQuery = sqlDatabaseFactory.factorTableQuery(type);
+		TableQuery tableQuery = factorTableQueryWithTablePrefix(type);
 		possiblySetFromNoInQueryFromFilter(tableQuery, filter);
 		possiblySetToNoInQueryFromFilter(tableQuery, filter);
 		return tableQuery;

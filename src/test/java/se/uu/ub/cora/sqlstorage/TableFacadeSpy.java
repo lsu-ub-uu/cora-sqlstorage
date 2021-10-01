@@ -33,6 +33,7 @@ public class TableFacadeSpy implements TableFacade {
 	public boolean throwExceptionOnRead = false;
 	public long totalNumberOfRecordsForType = 0;
 	public boolean throwDuplicateException = false;
+	public boolean throwExceptionOnUpdate = false;
 
 	@Override
 	public void close() {
@@ -92,6 +93,9 @@ public class TableFacadeSpy implements TableFacade {
 	public void updateRowsUsingQuery(TableQuery tableQuery) {
 		MCR.addCall("tableQuery", tableQuery);
 
+		if (throwExceptionOnUpdate) {
+			throw SqlDatabaseException.withMessage("Error from updateRowsUsingQuery in tablespy");
+		}
 		if (throwDuplicateException) {
 			throw SqlConflictException.withMessage("Error from updateRowsUsingQuery in tablespy");
 		}
