@@ -283,4 +283,14 @@ public class DatabaseRecordStorage implements RecordStorage {
 		return 0;
 	}
 
+	public SqlDatabaseFactory onlyForTestGetSqlDatabaseFactory() {
+		// Needed for test
+		return sqlDatabaseFactory;
+	}
+
+	public JsonParser onlyForTestGetJsonParser() {
+		// Needed for test
+		return jsonParser;
+	}
+
 }

@@ -428,5 +428,4 @@ public class DatabaseRecordStorageTest {
 			assertEquals(e.getCause().getMessage(), "Error from updateRowsUsingQuery in tablespy");
 		}
 	}
-
 }
