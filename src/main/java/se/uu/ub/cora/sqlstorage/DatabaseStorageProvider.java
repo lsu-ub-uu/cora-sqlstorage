@@ -26,7 +26,7 @@ import se.uu.ub.cora.logger.Logger;
 import se.uu.ub.cora.logger.LoggerProvider;
 import se.uu.ub.cora.sqldatabase.SqlDatabaseFactory;
 import se.uu.ub.cora.sqldatabase.SqlDatabaseFactoryImp;
-import se.uu.ub.cora.sqlstorage.internal.DatabaseRecordStorageInstance;
+import se.uu.ub.cora.sqlstorage.internal.DatabaseStorageInstance;
 import se.uu.ub.cora.storage.RecordStorageProvider;
 import se.uu.ub.cora.storage.StorageException;
 
@@ -56,7 +56,7 @@ public class DatabaseStorageProvider implements RecordStorageProvider {
 	}
 
 	private boolean storageNotStarted() {
-		return DatabaseRecordStorageInstance.getInstance() == null;
+		return DatabaseStorageInstance.getInstance() == null;
 	}
 
 	private void logAndStartStorage() {
@@ -103,7 +103,7 @@ public class DatabaseStorageProvider implements RecordStorageProvider {
 	@Override
 	public synchronized DatabaseRecordStorage getRecordStorage() {
 		throwErrorIfStorageNotStarted();
-		return DatabaseRecordStorageInstance.getInstance();
+		return DatabaseStorageInstance.getInstance();
 	}
 
 	private void throwErrorIfStorageNotStarted() {
@@ -114,7 +114,7 @@ public class DatabaseStorageProvider implements RecordStorageProvider {
 	}
 
 	static void setStaticInstance(DatabaseRecordStorage recordStorage) {
-		DatabaseRecordStorageInstance.setInstance(recordStorage);
+		DatabaseStorageInstance.setInstance(recordStorage);
 	}
 
 }

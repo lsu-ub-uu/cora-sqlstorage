@@ -16,7 +16,7 @@
  *     You should have received a copy of the GNU General Public License
  *     along with Cora.  If not, see <http://www.gnu.org/licenses/>.
  */
-package se.uu.ub.cora.sqlstorage;
+package se.uu.ub.cora.sqlstorage.spy.data;
 
 import java.util.Collection;
 import java.util.List;
@@ -25,12 +25,9 @@ import se.uu.ub.cora.data.DataAtomic;
 import se.uu.ub.cora.data.DataAttribute;
 import se.uu.ub.cora.data.DataElement;
 import se.uu.ub.cora.data.DataGroup;
-import se.uu.ub.cora.testutils.mcr.MethodCallRecorder;
+import se.uu.ub.cora.data.DataMissingException;
 
-public class FilterDataGroupSpy implements DataGroup {
-	public MethodCallRecorder MCR = new MethodCallRecorder();
-	public String fromNo = "";
-	public String toNo = "";
+public class DataGroupSpy implements DataGroup {
 
 	@Override
 	public void setRepeatId(String repeatId) {
@@ -58,12 +55,6 @@ public class FilterDataGroupSpy implements DataGroup {
 
 	@Override
 	public boolean containsChildWithNameInData(String nameInData) {
-		if ("fromNo".equals(nameInData) && !fromNo.isBlank()) {
-			return true;
-		}
-		if ("toNo".equals(nameInData) && !toNo.isBlank()) {
-			return true;
-		}
 		// TODO Auto-generated method stub
 		return false;
 	}
@@ -101,18 +92,16 @@ public class FilterDataGroupSpy implements DataGroup {
 
 	@Override
 	public DataElement getFirstChildWithNameInData(String nameInData) {
+		// TODO Auto-generated method stub
 		return null;
 	}
 
 	@Override
 	public String getFirstAtomicValueWithNameInData(String nameInData) {
-		if ("fromNo".equals(nameInData)) {
-			return fromNo;
-		}
-		if ("toNo".equals(nameInData)) {
-			return toNo;
-		}
-		return null;
+		// TODO Auto-generated method stub
+		throw new DataMissingException(
+				"Exception from DataGrupSpy in getFirstAtomicValueWithNameInData");
+		// return null;
 	}
 
 	@Override

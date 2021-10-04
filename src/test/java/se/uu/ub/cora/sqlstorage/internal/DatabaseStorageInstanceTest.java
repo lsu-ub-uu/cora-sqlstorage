@@ -29,18 +29,18 @@ import org.testng.annotations.Test;
 
 import se.uu.ub.cora.sqlstorage.DatabaseRecordStorage;
 
-public class DatabaseRecordStorageInstanceTest {
+public class DatabaseStorageInstanceTest {
 
 	@Test
 	public void testPrivateConstructor() throws Exception {
-		Constructor<DatabaseRecordStorageInstance> constructor = DatabaseRecordStorageInstance.class
+		Constructor<DatabaseStorageInstance> constructor = DatabaseStorageInstance.class
 				.getDeclaredConstructor();
 		assertTrue(Modifier.isPrivate(constructor.getModifiers()));
 	}
 
 	@Test(expectedExceptions = InvocationTargetException.class)
 	public void testPrivateConstructorInvoke() throws Exception {
-		Constructor<DatabaseRecordStorageInstance> constructor = DatabaseRecordStorageInstance.class
+		Constructor<DatabaseStorageInstance> constructor = DatabaseStorageInstance.class
 				.getDeclaredConstructor();
 		assertTrue(Modifier.isPrivate(constructor.getModifiers()));
 		constructor.setAccessible(true);
@@ -50,7 +50,7 @@ public class DatabaseRecordStorageInstanceTest {
 	@Test
 	public void testSetInstance() {
 		DatabaseRecordStorage storage = new RecordStorageSpy(null, null);
-		DatabaseRecordStorageInstance.setInstance(storage);
-		assertSame(DatabaseRecordStorageInstance.getInstance(), storage);
+		DatabaseStorageInstance.setInstance(storage);
+		assertSame(DatabaseStorageInstance.getInstance(), storage);
 	}
 }

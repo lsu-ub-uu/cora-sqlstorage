@@ -16,17 +16,40 @@
  *     You should have received a copy of the GNU General Public License
  *     along with Cora.  If not, see <http://www.gnu.org/licenses/>.
  */
-package se.uu.ub.cora.sqlstorage;
+package se.uu.ub.cora.sqlstorage.spy.sql;
 
-import se.uu.ub.cora.json.parser.JsonValue;
-import se.uu.ub.cora.json.parser.JsonValueType;
+import java.util.Set;
 
-public class JsonValueSpy implements JsonValue {
+import se.uu.ub.cora.sqldatabase.Row;
+import se.uu.ub.cora.testutils.mcr.MethodCallRecorder;
+
+public class RowSpy implements Row {
+	public MethodCallRecorder MCR = new MethodCallRecorder();
 
 	@Override
-	public JsonValueType getValueType() {
-		// TODO Auto-generated method stub
+	public Object getValueByColumn(String columnName) {
+		MCR.addCall("columnName", columnName);
+		String out = "some value from getValueByColumn in rowSpy";
+		MCR.addReturned(out);
+		return out;
+	}
+
+	@Override
+	public Set<String> columnSet() {
+		MCR.addCall();
 		return null;
+	}
+
+	@Override
+	public boolean hasColumn(String columnName) {
+		MCR.addCall("columnName", columnName);
+		return false;
+	}
+
+	@Override
+	public boolean hasColumnWithNonEmptyValue(String columnName) {
+		MCR.addCall("columnName", columnName);
+		return false;
 	}
 
 }

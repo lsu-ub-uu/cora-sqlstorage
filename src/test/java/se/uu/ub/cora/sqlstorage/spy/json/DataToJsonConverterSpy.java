@@ -15,7 +15,7 @@
 *     You should have received a copy of the GNU General Public License
 *     along with Cora.  If not, see <http://www.gnu.org/licenses/>.
 */
-package se.uu.ub.cora.sqlstorage;
+package se.uu.ub.cora.sqlstorage.spy.json;
 
 import se.uu.ub.cora.data.converter.DataToJsonConverter;
 import se.uu.ub.cora.json.builder.JsonObjectBuilder;
@@ -25,7 +25,7 @@ public class DataToJsonConverterSpy implements DataToJsonConverter {
 
 	String json = "Some json string from spy";
 
-	MethodCallRecorder MCR = new MethodCallRecorder();
+	public MethodCallRecorder MCR = new MethodCallRecorder();
 
 	@Override
 	public JsonObjectBuilder toJsonObjectBuilder() {

@@ -16,7 +16,7 @@
  *     You should have received a copy of the GNU General Public License
  *     along with Cora.  If not, see <http://www.gnu.org/licenses/>.
  */
-package se.uu.ub.cora.sqlstorage;
+package se.uu.ub.cora.sqlstorage.spy.json;
 
 import se.uu.ub.cora.json.parser.JsonArray;
 import se.uu.ub.cora.json.parser.JsonObject;
@@ -26,7 +26,7 @@ import se.uu.ub.cora.testutils.mcr.MethodCallRecorder;
 
 public class JsonParserSpy implements JsonParser {
 
-	MethodCallRecorder MCR = new MethodCallRecorder();
+	public MethodCallRecorder MCR = new MethodCallRecorder();
 
 	@Override
 	public JsonValue parseString(String jsonString) {

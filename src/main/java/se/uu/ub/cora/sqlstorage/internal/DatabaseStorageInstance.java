@@ -20,11 +20,11 @@ package se.uu.ub.cora.sqlstorage.internal;
 
 import se.uu.ub.cora.sqlstorage.DatabaseRecordStorage;
 
-public class DatabaseRecordStorageInstance {
+public class DatabaseStorageInstance {
 
 	private static DatabaseRecordStorage instance;
 
-	private DatabaseRecordStorageInstance() {
+	private DatabaseStorageInstance() {
 		throw new UnsupportedOperationException();
 	}
 

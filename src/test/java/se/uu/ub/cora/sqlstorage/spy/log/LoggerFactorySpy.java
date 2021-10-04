@@ -17,7 +17,7 @@
  *     along with Cora.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package se.uu.ub.cora.sqlstorage.log;
+package se.uu.ub.cora.sqlstorage.spy.log;
 
 import java.util.HashMap;
 import java.util.List;

@@ -16,40 +16,24 @@
  *     You should have received a copy of the GNU General Public License
  *     along with Cora.  If not, see <http://www.gnu.org/licenses/>.
  */
-package se.uu.ub.cora.sqlstorage;
+package se.uu.ub.cora.sqlstorage.spy.json;
 
-import java.util.Set;
-
-import se.uu.ub.cora.sqldatabase.Row;
+import se.uu.ub.cora.data.DataPart;
+import se.uu.ub.cora.data.converter.JsonToDataConverter;
+import se.uu.ub.cora.sqlstorage.spy.data.DataPartSpy;
 import se.uu.ub.cora.testutils.mcr.MethodCallRecorder;
 
-public class RowSpy implements Row {
+public class JsonToDataConverterSpy implements JsonToDataConverter {
+
 	public MethodCallRecorder MCR = new MethodCallRecorder();
 
 	@Override
-	public Object getValueByColumn(String columnName) {
-		MCR.addCall("columnName", columnName);
-		String out = "some value from getValueByColumn in rowSpy";
-		MCR.addReturned(out);
-		return out;
-	}
-
-	@Override
-	public Set<String> columnSet() {
+	public DataPart toInstance() {
 		MCR.addCall();
-		return null;
-	}
 
-	@Override
-	public boolean hasColumn(String columnName) {
-		MCR.addCall("columnName", columnName);
-		return false;
-	}
-
-	@Override
-	public boolean hasColumnWithNonEmptyValue(String columnName) {
-		MCR.addCall("columnName", columnName);
-		return false;
+		DataPart dataPartSpy = new DataPartSpy();
+		MCR.addReturned(dataPartSpy);
+		return dataPartSpy;
 	}
 
 }

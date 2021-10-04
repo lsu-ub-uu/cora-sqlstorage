@@ -16,7 +16,7 @@
  *     You should have received a copy of the GNU General Public License
  *     along with Cora.  If not, see <http://www.gnu.org/licenses/>.
  */
-package se.uu.ub.cora.sqlstorage;
+package se.uu.ub.cora.sqlstorage.spy.sql;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -29,7 +29,7 @@ import se.uu.ub.cora.sqldatabase.table.TableQuery;
 import se.uu.ub.cora.testutils.mcr.MethodCallRecorder;
 
 public class TableFacadeSpy implements TableFacade {
-	MethodCallRecorder MCR = new MethodCallRecorder();
+	public MethodCallRecorder MCR = new MethodCallRecorder();
 	public boolean throwExceptionOnRead = false;
 	public long totalNumberOfRecordsForType = 0;
 	public boolean throwDuplicateException = false;

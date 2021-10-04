@@ -1,4 +1,4 @@
-package se.uu.ub.cora.sqlstorage;
+package se.uu.ub.cora.sqlstorage.spy.json;
 
 import java.util.Map.Entry;
 import java.util.Set;

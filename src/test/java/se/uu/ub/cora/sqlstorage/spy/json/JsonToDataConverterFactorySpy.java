@@ -16,24 +16,24 @@
  *     You should have received a copy of the GNU General Public License
  *     along with Cora.  If not, see <http://www.gnu.org/licenses/>.
  */
-package se.uu.ub.cora.sqlstorage;
+package se.uu.ub.cora.sqlstorage.spy.json;
 
-import se.uu.ub.cora.data.converter.DataToJsonConverterFactory;
-import se.uu.ub.cora.data.converter.DataToJsonConverterFactoryCreator;
+import se.uu.ub.cora.data.converter.JsonToDataConverter;
+import se.uu.ub.cora.data.converter.JsonToDataConverterFactory;
+import se.uu.ub.cora.json.parser.JsonValue;
 import se.uu.ub.cora.testutils.mcr.MethodCallRecorder;
 
-public class DataToJsonConverterFactoryCreatorSpy implements DataToJsonConverterFactoryCreator {
+public class JsonToDataConverterFactorySpy implements JsonToDataConverterFactory {
 
-	DataToJsonConverterFactory dataToJsonConverterFactory = new DataToJsonConverterFactorySpy();
-
-	MethodCallRecorder MCR = new MethodCallRecorder();
+	public MethodCallRecorder MCR = new MethodCallRecorder();
 
 	@Override
-	public DataToJsonConverterFactory createFactory() {
-		MCR.addCall();
+	public JsonToDataConverter createForJsonObject(JsonValue jsonValue) {
+		MCR.addCall("jsonValue", jsonValue);
 
-		MCR.addReturned(dataToJsonConverterFactory);
-		return dataToJsonConverterFactory;
+		JsonToDataConverterSpy jsonToDataConverterSpy = new JsonToDataConverterSpy();
+		MCR.addReturned(jsonToDataConverterSpy);
+		return jsonToDataConverterSpy;
 	}
 
 }

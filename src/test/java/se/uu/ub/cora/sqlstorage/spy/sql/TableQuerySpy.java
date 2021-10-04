@@ -1,4 +1,4 @@
-package se.uu.ub.cora.sqlstorage;
+package se.uu.ub.cora.sqlstorage.spy.sql;
 
 import java.util.List;
 
@@ -6,7 +6,7 @@ import se.uu.ub.cora.sqldatabase.table.TableQuery;
 import se.uu.ub.cora.testutils.mcr.MethodCallRecorder;
 
 public class TableQuerySpy implements TableQuery {
-	MethodCallRecorder MCR = new MethodCallRecorder();
+	public MethodCallRecorder MCR = new MethodCallRecorder();
 
 	@Override
 	public void addParameter(String name, Object value) {

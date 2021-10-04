@@ -17,7 +17,7 @@
  *     along with Cora.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package se.uu.ub.cora.sqlstorage;
+package se.uu.ub.cora.sqlstorage.spy.sql;
 
 import se.uu.ub.cora.sqldatabase.DatabaseFacade;
 import se.uu.ub.cora.sqldatabase.SqlDatabaseFactory;
@@ -26,8 +26,8 @@ import se.uu.ub.cora.sqldatabase.table.TableQuery;
 import se.uu.ub.cora.testutils.mcr.MethodCallRecorder;
 
 public class SqlDatabaseFactorySpy implements SqlDatabaseFactory {
-	MethodCallRecorder MCR = new MethodCallRecorder();
-	boolean throwExceptionFromTableFacadeOnRead = false;
+	public MethodCallRecorder MCR = new MethodCallRecorder();
+	public boolean throwExceptionFromTableFacadeOnRead = false;
 	public long totalNumberOfRecordsForType = 0;
 	public boolean throwDuplicateExceptionFromTableFacade = false;
 	public boolean throwExceptionFromTableFacadeOnUpdate = false;

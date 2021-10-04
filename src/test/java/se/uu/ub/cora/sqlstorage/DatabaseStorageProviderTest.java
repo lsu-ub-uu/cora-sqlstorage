@@ -35,8 +35,8 @@ import se.uu.ub.cora.json.parser.JsonParser;
 import se.uu.ub.cora.json.parser.org.OrgJsonParser;
 import se.uu.ub.cora.logger.LoggerProvider;
 import se.uu.ub.cora.sqldatabase.SqlDatabaseFactoryImp;
-import se.uu.ub.cora.sqlstorage.internal.DatabaseRecordStorageInstance;
-import se.uu.ub.cora.sqlstorage.log.LoggerFactorySpy;
+import se.uu.ub.cora.sqlstorage.internal.DatabaseStorageInstance;
+import se.uu.ub.cora.sqlstorage.spy.log.LoggerFactorySpy;
 import se.uu.ub.cora.storage.RecordStorage;
 import se.uu.ub.cora.storage.StorageException;
 
@@ -52,7 +52,7 @@ public class DatabaseStorageProviderTest {
 		setUpFactories();
 		setUpDefaultInitInfo();
 		provider = new DatabaseStorageProvider();
-		DatabaseRecordStorageInstance.setInstance(null);
+		DatabaseStorageInstance.setInstance(null);
 	}
 
 	private void setUpFactories() {
