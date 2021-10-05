@@ -137,7 +137,9 @@ public class DatabaseStorageProviderTest {
 
 	@Test
 	public void testThreadsWhenCreatingConnectionProvider() throws Exception {
-		Method declaredMethod = DatabaseStorageProvider.class.getDeclaredMethod("getRecordStorage");
+		Class<?>[] methodParameters = { Map.class };
+		Method declaredMethod = DatabaseStorageProvider.class
+				.getDeclaredMethod("startUsingInitInfo", methodParameters);
 		assertTrue(Modifier.isSynchronized(declaredMethod.getModifiers()));
 	}
 
