@@ -42,7 +42,7 @@ public class DatabaseStorageProvider implements RecordStorageProvider {
 	}
 
 	@Override
-	public void startUsingInitInfo(Map<String, String> initInfo) {
+	public synchronized void startUsingInitInfo(Map<String, String> initInfo) {
 		this.initInfo = initInfo;
 		possiblyStartStorage();
 	}
@@ -101,7 +101,7 @@ public class DatabaseStorageProvider implements RecordStorageProvider {
 	}
 
 	@Override
-	public synchronized DatabaseRecordStorage getRecordStorage() {
+	public DatabaseRecordStorage getRecordStorage() {
 		throwErrorIfStorageNotStarted();
 		return DatabaseStorageInstance.getInstance();
 	}
