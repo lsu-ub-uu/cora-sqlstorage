@@ -12,5 +12,7 @@ module se.uu.ub.cora.sqlstorage {
 	requires se.uu.ub.cora.sqldatabase;
 	requires se.uu.ub.cora.logger;
 
+	exports se.uu.ub.cora.sqlstorage;
+
 	provides se.uu.ub.cora.storage.RecordStorageProvider with DatabaseStorageProvider;
 }
