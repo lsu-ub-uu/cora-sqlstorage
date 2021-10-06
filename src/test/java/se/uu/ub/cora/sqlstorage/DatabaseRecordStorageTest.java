@@ -326,10 +326,13 @@ public class DatabaseRecordStorageTest {
 	public void testGetTotalNumberOfRecordsForType() throws Exception {
 		sqlDatabaseFactorySpy.totalNumberOfRecordsForType = 747;
 
-		long count = storage.getTotalNumberOfRecordsForType("somType", emptyFilterSpy);
+		long count = storage.getTotalNumberOfRecordsForType("someType", emptyFilterSpy);
 
 		TableQuerySpy tableQuerySpy = getFirstFactoredTableQuery();
 		TableFacadeSpy tableFacadeSpy = getFirstFactoredTableFacadeSpy();
+
+		sqlDatabaseFactorySpy.MCR.assertParameter("factorTableQuery", 0, "tableName",
+				"record_someType");
 
 		tableFacadeSpy.MCR.assertParameters("readNumberOfRows", 0, tableQuerySpy);
 		tableFacadeSpy.MCR.assertReturn("readNumberOfRows", 0, count);

@@ -273,7 +273,7 @@ public class DatabaseRecordStorage implements RecordStorage {
 	}
 
 	private TableQuery assembleCountQuery(String type, DataGroup filter) {
-		return sqlDatabaseFactory.factorTableQuery(type);
+		return factorTableQueryWithTablePrefix(type);
 	}
 
 	@Override
