@@ -35,6 +35,7 @@ public class DatabaseStorageProvider implements RecordStorageProvider {
 	private Logger log = LoggerProvider.getLoggerForClass(DatabaseStorageProvider.class);
 	private static final String LOOKUP_NAME = "coraDatabaseLookupName";
 	private Map<String, String> initInfo;
+	private String databaseLookupValue;
 
 	@Override
 	public int getOrderToSelectImplementionsBy() {
@@ -66,14 +67,14 @@ public class DatabaseStorageProvider implements RecordStorageProvider {
 	}
 
 	private void startStorage() {
-		tryToGetInitParameterLogIfFoundThrowErrorIfNot(LOOKUP_NAME);
+		databaseLookupValue = tryToGetInitParameterLogIfFoundThrowErrorIfNot(LOOKUP_NAME);
 		createDependenciesAndStartStorage();
 	}
 
 	private String tryToGetInitParameterLogIfFoundThrowErrorIfNot(String parameterName) {
-		String basePath = tryToGetInitParameter(parameterName);
-		log.logInfoUsingMessage("Found " + basePath + " as " + parameterName);
-		return basePath;
+		String parameterValue = tryToGetInitParameter(parameterName);
+		log.logInfoUsingMessage("Found " + parameterValue + " as " + parameterName);
+		return parameterValue;
 	}
 
 	private String tryToGetInitParameter(String parameterName) {
@@ -91,7 +92,7 @@ public class DatabaseStorageProvider implements RecordStorageProvider {
 
 	private void createDependenciesAndStartStorage() {
 		SqlDatabaseFactory sqlDatabaseFactory = SqlDatabaseFactoryImp
-				.usingLookupNameFromContext(LOOKUP_NAME);
+				.usingLookupNameFromContext(databaseLookupValue);
 		JsonParser jsonParser = new OrgJsonParser();
 		setStaticInstance(new DatabaseRecordStorage(sqlDatabaseFactory, jsonParser));
 	}

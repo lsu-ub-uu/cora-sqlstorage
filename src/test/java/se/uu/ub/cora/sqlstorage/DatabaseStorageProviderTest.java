@@ -86,7 +86,7 @@ public class DatabaseStorageProviderTest {
 				.onlyForTestGetSqlDatabaseFactory();
 		assertNotNull(sqlDatabaseFactory);
 		String lookupName = sqlDatabaseFactory.onlyForTestGetLookupName();
-		assertEquals(lookupName, "coraDatabaseLookupName");
+		assertEquals(lookupName, "java:/comp/env/jdbc/coraPostgres");
 	}
 
 	@Test
