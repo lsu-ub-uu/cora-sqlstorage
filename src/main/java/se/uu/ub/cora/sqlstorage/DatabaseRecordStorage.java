@@ -195,14 +195,14 @@ public class DatabaseRecordStorage implements RecordStorage {
 	private void possiblySetToNoInQueryFromFilter(TableQuery tableQuery, DataGroup filter) {
 		if (filter.containsChildWithNameInData("toNo")) {
 			String toNo = filter.getFirstAtomicValueWithNameInData("toNo");
-			tableQuery.setToNo(Long.parseLong(toNo));
+			tableQuery.setToNo(Long.valueOf(toNo));
 		}
 	}
 
 	private void possiblySetFromNoInQueryFromFilter(TableQuery tableQuery, DataGroup filter) {
 		if (filter.containsChildWithNameInData("fromNo")) {
 			String fromNo = filter.getFirstAtomicValueWithNameInData("fromNo");
-			tableQuery.setFromNo(Long.parseLong(fromNo));
+			tableQuery.setFromNo(Long.valueOf(fromNo));
 		}
 	}
 
@@ -220,7 +220,7 @@ public class DatabaseRecordStorage implements RecordStorage {
 	}
 
 	private void convertAndAddRowToResult(List<Row> readRows, StorageReadResult storageReadResult) {
-		List<DataGroup> dataGroups = new ArrayList<>();
+		List<DataGroup> dataGroups = new ArrayList<>(readRows.size());
 		for (Row row : readRows) {
 			dataGroups.add(convertRowToDataGroup(row));
 		}
