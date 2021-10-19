@@ -22,6 +22,8 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
+import org.postgresql.util.PGobject;
+
 import se.uu.ub.cora.data.DataGroup;
 import se.uu.ub.cora.data.converter.DataToJsonConverter;
 import se.uu.ub.cora.data.converter.DataToJsonConverterFactory;
@@ -164,7 +166,16 @@ public class DatabaseRecordStorage implements RecordStorage {
 			String dataRecord) {
 		TableQuery tableQuery = factorTableQueryWithTablePrefix(type);
 		tableQuery.addParameter(DATA_DIVIDER_COLUMN, dataDivider);
-		tableQuery.addParameter(DATA_RECORD_COLUMN, dataRecord);
+		PGobject jsonObject = new PGobject();
+		jsonObject.setType("json");
+		try {
+			jsonObject.setValue(dataRecord);
+		} catch (Exception e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+
+		tableQuery.addParameter(DATA_RECORD_COLUMN, jsonObject);
 		tableQuery.addCondition(ID_COLUMN, id);
 		return tableQuery;
 	}

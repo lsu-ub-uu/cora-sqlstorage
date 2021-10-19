@@ -24,6 +24,7 @@ import static org.testng.Assert.assertTrue;
 
 import java.util.List;
 
+import org.postgresql.util.PGobject;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
@@ -420,7 +421,44 @@ public class DatabaseRecordStorageTest {
 		sqlDatabaseFactorySpy.MCR.assertParameters("factorTableQuery", 0, "record_someType");
 		TableQuerySpy tableQuerySpy = getFirstFactoredTableQuery();
 		tableQuerySpy.MCR.assertParameters("addParameter", 0, "datadivider", dataDivider);
-		tableQuerySpy.MCR.assertParameters("addParameter", 1, "record", dataRecordJson);
+		PGobject jsonObject = new PGobject();
+		jsonObject.setType("json");
+		jsonObject.setValue(dataRecordJson);
+
+		PGobject jsonObject2 = (PGobject) tableQuerySpy.MCR
+				.getValueForMethodNameAndCallNumberAndParameterName("addParameter", 1, "value");
+		assertEquals(jsonObject2.getType(), "json");
+		assertEquals(jsonObject2.getValue(), dataRecordJson);
+
+		// tableQuerySpy.MCR.assertParameters("addParameter", 1, "record", jsonObject2.getValue());
+		tableQuerySpy.MCR.assertParameters("addCondition", 0, "id", someId);
+
+		TableFacadeSpy firstFactoredTableFacadeSpy = getFirstFactoredTableFacadeSpy();
+
+		firstFactoredTableFacadeSpy.MCR.assertParameters("updateRowsUsingQuery", 0, tableQuerySpy);
+	}
+
+	@Test
+	public void testUpdateParameterRecordNotValidJson() throws Exception {
+
+		storage.update(someType, someId, dataRecord, emptyCollectedTerms, emptyLinkList,
+				dataDivider);
+
+		String dataRecordJson = getConvertedJson(dataRecord);
+
+		sqlDatabaseFactorySpy.MCR.assertParameters("factorTableQuery", 0, "record_someType");
+		TableQuerySpy tableQuerySpy = getFirstFactoredTableQuery();
+		tableQuerySpy.MCR.assertParameters("addParameter", 0, "datadivider", dataDivider);
+		PGobject jsonObject = new PGobject();
+		jsonObject.setType("json");
+		jsonObject.setValue(dataRecordJson);
+
+		PGobject jsonObject2 = (PGobject) tableQuerySpy.MCR
+				.getValueForMethodNameAndCallNumberAndParameterName("addParameter", 1, "value");
+		assertEquals(jsonObject2.getType(), "json");
+		assertEquals(jsonObject2.getValue(), dataRecordJson);
+
+		// tableQuerySpy.MCR.assertParameters("addParameter", 1, "record", jsonObject2.getValue());
 		tableQuerySpy.MCR.assertParameters("addCondition", 0, "id", someId);
 
 		TableFacadeSpy firstFactoredTableFacadeSpy = getFirstFactoredTableFacadeSpy();
