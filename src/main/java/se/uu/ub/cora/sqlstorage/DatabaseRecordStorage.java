@@ -116,6 +116,11 @@ public class DatabaseRecordStorage implements RecordStorage {
 			throw RecordConflictException.withMessageAndException(
 					"Record with type: " + type + ", and id: " + id + " already exists in storage.",
 					e);
+		} catch (Exception e) {
+			throw StorageException.withMessageAndException(
+					"Storage exception when updating record with recordType: " + type + " with id: "
+							+ id,
+					e);
 		}
 	}
 
@@ -131,11 +136,12 @@ public class DatabaseRecordStorage implements RecordStorage {
 	}
 
 	private TableQuery assembleCreateQuery(String type, String id, String dataDivider,
-			String dataRecord) {
+			String dataRecord) throws SQLException {
 		TableQuery tableQuery = factorTableQueryWithTablePrefix(type);
 		tableQuery.addParameter(ID_COLUMN, id);
 		tableQuery.addParameter(DATA_DIVIDER_COLUMN, dataDivider);
-		tableQuery.addParameter(DATA_RECORD_COLUMN, dataRecord);
+		PGobject jsonObject = createJsonObject(dataRecord);
+		tableQuery.addParameter(DATA_RECORD_COLUMN, jsonObject);
 		return tableQuery;
 	}
 

@@ -365,7 +365,16 @@ public class DatabaseRecordStorageTest {
 		TableQuerySpy tableQuerySpy = getFirstFactoredTableQuery();
 		tableQuerySpy.MCR.assertParameters("addParameter", 0, "id", someId);
 		tableQuerySpy.MCR.assertParameters("addParameter", 1, "datadivider", dataDivider);
-		tableQuerySpy.MCR.assertParameters("addParameter", 2, "record", dataRecordJson);
+
+		PGobject jsonObject = new PGobject();
+		jsonObject.setType("json");
+		jsonObject.setValue(dataRecordJson);
+
+		PGobject jsonObject2 = (PGobject) tableQuerySpy.MCR
+				.getValueForMethodNameAndCallNumberAndParameterName("addParameter", 2, "value");
+		assertEquals(jsonObject2.getType(), "json");
+		assertEquals(jsonObject2.getValue(), dataRecordJson);
+		// tableQuerySpy.MCR.assertParameters("addParameter", 2, "record", dataRecordJson);
 
 		TableFacadeSpy firstFactoredTableFacadeSpy = getFirstFactoredTableFacadeSpy();
 		firstFactoredTableFacadeSpy.MCR.assertParameters("insertRowUsingQuery", 0, tableQuerySpy);
@@ -397,6 +406,23 @@ public class DatabaseRecordStorageTest {
 			assertEquals(e.getMessage(),
 					"Record with type: someType, and id: someId already exists in storage.");
 			assertEquals(e.getCause().getMessage(), "Error from insertRowUsingQuery in tablespy");
+
+		}
+	}
+
+	@Test
+	public void testCreateThrowsSQlDatabaseException() throws Exception {
+		sqlDatabaseFactorySpy.throwSqlExceptionFromTableFacade = true;
+
+		try {
+			storage.create(someType, someId, dataRecord, emptyCollectedTerms, emptyLinkList,
+					dataDivider);
+			makeSureErrorIsThrownFromAboveStatements();
+		} catch (Exception e) {
+			assertTrue(e instanceof StorageException);
+			assertEquals(e.getMessage(),
+					"Storage exception when updating record with recordType: someType with id: someId");
+			assertEquals(e.getCause().getMessage(), "Error from spy");
 
 		}
 	}

@@ -31,6 +31,7 @@ public class SqlDatabaseFactorySpy implements SqlDatabaseFactory {
 	public long totalNumberOfRecordsForType = 0;
 	public boolean throwDuplicateExceptionFromTableFacade = false;
 	public boolean throwExceptionFromTableFacadeOnUpdate = false;
+	public boolean throwSqlExceptionFromTableFacade = false;
 
 	@Override
 	public DatabaseFacade factorDatabaseFacade() {
@@ -45,6 +46,7 @@ public class SqlDatabaseFactorySpy implements SqlDatabaseFactory {
 		tableFacadeSpy.throwExceptionOnRead = throwExceptionFromTableFacadeOnRead;
 		tableFacadeSpy.throwExceptionOnUpdate = throwExceptionFromTableFacadeOnUpdate;
 		tableFacadeSpy.throwDuplicateException = throwDuplicateExceptionFromTableFacade;
+		tableFacadeSpy.throwSqlException = throwSqlExceptionFromTableFacade;
 		tableFacadeSpy.totalNumberOfRecordsForType = totalNumberOfRecordsForType;
 		MCR.addReturned(tableFacadeSpy);
 		return tableFacadeSpy;
