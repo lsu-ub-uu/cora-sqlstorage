@@ -37,7 +37,6 @@
 
 	<properties>
 		<storage.version>5.0-SNAPSHOT</storage.version>
-<!-- 		<storage.version>4.2.0</storage.version> -->
 		<data.version>5.1.0</data.version>
 		<json.version>3.0-SNAPSHOT</json.version>
 		<sqldatabase.version>5.0-SNAPSHOT</sqldatabase.version>
@@ -58,11 +57,6 @@
 			<artifactId>storage</artifactId>
 			<version>${storage.version}</version>
 		</dependency>
-<!-- 		<dependency> -->
-<!-- 			<groupId>se.uu.ub.cora</groupId> -->
-<!-- 			<artifactId>spider</artifactId> -->
-<!-- 			<version>${spider.version}</version> -->
-<!-- 		</dependency> -->
 		<dependency>
 			<groupId>se.uu.ub.cora</groupId>
 			<artifactId>coradata</artifactId>
