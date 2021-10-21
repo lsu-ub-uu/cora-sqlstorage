@@ -279,11 +279,11 @@ public class DatabaseRecordStorage implements RecordStorage {
 
 	private long readFromDatabaseForTypeAndFilter(String type, DataGroup filter,
 			TableFacade tableFacade) {
-		TableQuery tableQuery = assembleCountQuery(type, filter);
+		TableQuery tableQuery = assembleCountQuery(type);
 		return tableFacade.readNumberOfRows(tableQuery);
 	}
 
-	private TableQuery assembleCountQuery(String type, DataGroup filter) {
+	private TableQuery assembleCountQuery(String type) {
 		return factorTableQueryWithTablePrefix(type);
 	}
 
