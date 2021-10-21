@@ -22,6 +22,7 @@ import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertTrue;
 
+import java.util.Collections;
 import java.util.List;
 
 import org.postgresql.util.PGobject;
@@ -46,12 +47,12 @@ import se.uu.ub.cora.sqlstorage.spy.sql.TableFacadeSpy;
 import se.uu.ub.cora.sqlstorage.spy.sql.TableQuerySpy;
 import se.uu.ub.cora.storage.RecordConflictException;
 import se.uu.ub.cora.storage.RecordNotFoundException;
-import se.uu.ub.cora.storage.RecordStorage;
+import se.uu.ub.cora.storage.StorageException;
 import se.uu.ub.cora.storage.StorageReadResult;
 
 public class DatabaseRecordStorageTest {
 
-	private RecordStorage storage;
+	private DatabaseRecordStorage storage;
 	private SqlDatabaseFactorySpy sqlDatabaseFactorySpy;
 	private JsonParserSpy jsonParserSpy;
 	private JsonToDataConverterFactorySpy factoryCreatorSpy;
@@ -475,10 +476,54 @@ public class DatabaseRecordStorageTest {
 			makeSureErrorIsThrownFromAboveStatements();
 
 		} catch (Exception e) {
-			assertTrue(e instanceof RecordNotFoundException);
+			assertTrue(e instanceof StorageException);
 			assertEquals(e.getMessage(),
-					"No record found for recordType: someType with id: someId");
+					"Storage exception when updating record with recordType: someType with id: someId");
 			assertEquals(e.getCause().getMessage(), "Error from updateRowsUsingQuery in tablespy");
 		}
 	}
+
+	@Test(expectedExceptions = NotImplementedException.class, expectedExceptionsMessageRegExp = ""
+			+ "deleteByTypeAndId is not implemented")
+	public void testDeleteByTypeAndId() {
+		storage.deleteByTypeAndId("someType", "someId");
+	}
+
+	@Test(expectedExceptions = NotImplementedException.class, expectedExceptionsMessageRegExp = ""
+			+ "linksExistForRecord is not implemented")
+	public void testLinksExistForRecord() {
+		storage.linksExistForRecord("someType", "someId");
+	}
+
+	@Test(expectedExceptions = NotImplementedException.class, expectedExceptionsMessageRegExp = ""
+			+ "readLinkList is not implemented")
+	public void testReadLinkList() {
+		storage.readLinkList("someType", "someId");
+	}
+
+	@Test(expectedExceptions = NotImplementedException.class, expectedExceptionsMessageRegExp = ""
+			+ "readAbstractList is not implemented")
+	public void testAbstractList() {
+		storage.readAbstractList("someType", new DataGroupSpy());
+	}
+
+	@Test(expectedExceptions = NotImplementedException.class, expectedExceptionsMessageRegExp = ""
+			+ "generateLinkCollectionPointingToRecord is not implemented")
+	public void testGenerateLinkCollectionPointingToRecord() {
+		storage.generateLinkCollectionPointingToRecord("someType", "someId");
+	}
+
+	@Test(expectedExceptions = NotImplementedException.class, expectedExceptionsMessageRegExp = ""
+			+ "recordExistsForAbstractOrImplementingRecordTypeAndRecordId is not implemented")
+	public void testRecordExistsForAbstractOrImplementingRecordTypeAndRecordId() {
+		storage.recordExistsForAbstractOrImplementingRecordTypeAndRecordId("someType", "someId");
+	}
+
+	@Test(expectedExceptions = NotImplementedException.class, expectedExceptionsMessageRegExp = ""
+			+ "getTotalNumberOfRecordsForAbstractType is not implemented")
+	public void testGetTotalNumberOfRecordsForAbstractType() {
+		storage.getTotalNumberOfRecordsForAbstractType("someAbstractType", Collections.emptyList(),
+				new DataGroupSpy());
+	}
+
 }

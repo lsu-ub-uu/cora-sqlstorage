@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 Uppsala University Library
+ * Copyright 2018 Uppsala University Library
  *
  * This file is part of Cora.
  *
@@ -16,24 +16,18 @@
  *     You should have received a copy of the GNU General Public License
  *     along with Cora.  If not, see <http://www.gnu.org/licenses/>.
  */
-package se.uu.ub.cora.sqlstorage.spy.json;
+package se.uu.ub.cora.sqlstorage;
 
-import se.uu.ub.cora.data.converter.DataToJsonConverterFactory;
-import se.uu.ub.cora.data.converter.DataToJsonConverterFactoryCreator;
-import se.uu.ub.cora.testutils.mcr.MethodCallRecorder;
+public final class NotImplementedException extends RuntimeException {
 
-public class DataToJsonConverterFactoryCreatorSpy implements DataToJsonConverterFactoryCreator {
+	private static final long serialVersionUID = 1L;
 
-	public DataToJsonConverterFactory dataToJsonConverterFactory = new DataToJsonConverterFactorySpy();
+	public static NotImplementedException withMessage(String message) {
+		return new NotImplementedException(message);
+	}
 
-	public MethodCallRecorder MCR = new MethodCallRecorder();
-
-	@Override
-	public DataToJsonConverterFactory createFactory() {
-		MCR.addCall();
-
-		MCR.addReturned(dataToJsonConverterFactory);
-		return dataToJsonConverterFactory;
+	private NotImplementedException(String message) {
+		super(message);
 	}
 
 }

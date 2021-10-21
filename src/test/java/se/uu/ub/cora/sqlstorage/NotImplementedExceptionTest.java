@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 Uppsala University Library
+ * Copyright 2018 Uppsala University Library
  *
  * This file is part of Cora.
  *
@@ -16,24 +16,17 @@
  *     You should have received a copy of the GNU General Public License
  *     along with Cora.  If not, see <http://www.gnu.org/licenses/>.
  */
-package se.uu.ub.cora.sqlstorage.spy.json;
+package se.uu.ub.cora.sqlstorage;
 
-import se.uu.ub.cora.data.converter.DataToJsonConverterFactory;
-import se.uu.ub.cora.data.converter.DataToJsonConverterFactoryCreator;
-import se.uu.ub.cora.testutils.mcr.MethodCallRecorder;
+import static org.testng.Assert.assertEquals;
 
-public class DataToJsonConverterFactoryCreatorSpy implements DataToJsonConverterFactoryCreator {
+import org.testng.annotations.Test;
 
-	public DataToJsonConverterFactory dataToJsonConverterFactory = new DataToJsonConverterFactorySpy();
-
-	public MethodCallRecorder MCR = new MethodCallRecorder();
-
-	@Override
-	public DataToJsonConverterFactory createFactory() {
-		MCR.addCall();
-
-		MCR.addReturned(dataToJsonConverterFactory);
-		return dataToJsonConverterFactory;
+public class NotImplementedExceptionTest {
+	@Test
+	public void testInit() {
+		String message = "message";
+		NotImplementedException exception = NotImplementedException.withMessage(message);
+		assertEquals(exception.getMessage(), "message");
 	}
-
 }

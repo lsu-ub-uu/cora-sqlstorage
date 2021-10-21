@@ -12,6 +12,7 @@ module se.uu.ub.cora.sqlstorage {
 	requires se.uu.ub.cora.sqldatabase;
 	requires se.uu.ub.cora.logger;
 	requires org.postgresql.jdbc;
+	requires java.sql;
 
 	// Temporal export. Should be removed when DatabaseStorageProvider can be load via a service
 	// loader.

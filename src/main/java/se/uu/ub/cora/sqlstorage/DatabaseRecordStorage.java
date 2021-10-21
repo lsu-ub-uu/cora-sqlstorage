@@ -18,6 +18,7 @@
  */
 package se.uu.ub.cora.sqlstorage;
 
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -41,6 +42,7 @@ import se.uu.ub.cora.sqldatabase.table.TableQuery;
 import se.uu.ub.cora.storage.RecordConflictException;
 import se.uu.ub.cora.storage.RecordNotFoundException;
 import se.uu.ub.cora.storage.RecordStorage;
+import se.uu.ub.cora.storage.StorageException;
 import se.uu.ub.cora.storage.StorageReadResult;
 
 /**
@@ -139,14 +141,12 @@ public class DatabaseRecordStorage implements RecordStorage {
 
 	@Override
 	public void deleteByTypeAndId(String type, String id) {
-		// TODO Auto-generated method stub
-
+		throw NotImplementedException.withMessage("deleteByTypeAndId is not implemented");
 	}
 
 	@Override
 	public boolean linksExistForRecord(String type, String id) {
-		// TODO Auto-generated method stub
-		return false;
+		throw NotImplementedException.withMessage("linksExistForRecord is not implemented");
 	}
 
 	@Override
@@ -156,28 +156,30 @@ public class DatabaseRecordStorage implements RecordStorage {
 			String dataRecordJson = convertDataGroupToJsonString(dataRecord);
 			TableQuery tableQuery = assembleUpdateQuery(type, id, dataDivider, dataRecordJson);
 			tableFacade.updateRowsUsingQuery(tableQuery);
-		} catch (SqlDatabaseException e) {
-			throw new RecordNotFoundException(
-					"No record found for recordType: " + type + " with id: " + id, e);
+		} catch (Exception e) {
+			throw StorageException.withMessageAndException(
+					"Storage exception when updating record with recordType: " + type + " with id: "
+							+ id,
+					e);
 		}
 	}
 
 	private TableQuery assembleUpdateQuery(String type, String id, String dataDivider,
-			String dataRecord) {
+			String dataRecord) throws SQLException {
 		TableQuery tableQuery = factorTableQueryWithTablePrefix(type);
 		tableQuery.addParameter(DATA_DIVIDER_COLUMN, dataDivider);
-		PGobject jsonObject = new PGobject();
-		jsonObject.setType("json");
-		try {
-			jsonObject.setValue(dataRecord);
-		} catch (Exception e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
+		PGobject jsonObject = createJsonObject(dataRecord);
 
 		tableQuery.addParameter(DATA_RECORD_COLUMN, jsonObject);
 		tableQuery.addCondition(ID_COLUMN, id);
 		return tableQuery;
+	}
+
+	private PGobject createJsonObject(String dataRecord) throws SQLException {
+		PGobject jsonObject = new PGobject();
+		jsonObject.setType("json");
+		jsonObject.setValue(dataRecord);
+		return jsonObject;
 	}
 
 	@Override
@@ -240,27 +242,25 @@ public class DatabaseRecordStorage implements RecordStorage {
 
 	@Override
 	public StorageReadResult readAbstractList(String type, DataGroup filter) {
-		// TODO Auto-generated method stub
-		return null;
+		throw NotImplementedException.withMessage("readAbstractList is not implemented");
 	}
 
 	@Override
 	public DataGroup readLinkList(String type, String id) {
-		// TODO Auto-generated method stub
-		return null;
+		throw NotImplementedException.withMessage("readLinkList is not implemented");
 	}
 
 	@Override
 	public Collection<DataGroup> generateLinkCollectionPointingToRecord(String type, String id) {
-		// TODO Auto-generated method stub
-		return null;
+		throw NotImplementedException
+				.withMessage("generateLinkCollectionPointingToRecord is not implemented");
 	}
 
 	@Override
 	public boolean recordExistsForAbstractOrImplementingRecordTypeAndRecordId(String type,
 			String id) {
-		// TODO Auto-generated method stub
-		return false;
+		throw NotImplementedException.withMessage(
+				"recordExistsForAbstractOrImplementingRecordTypeAndRecordId is not implemented");
 	}
 
 	@Override
@@ -290,8 +290,8 @@ public class DatabaseRecordStorage implements RecordStorage {
 	@Override
 	public long getTotalNumberOfRecordsForAbstractType(String abstractType,
 			List<String> implementingTypes, DataGroup filter) {
-		// TODO Auto-generated method stub
-		return 0;
+		throw NotImplementedException
+				.withMessage("getTotalNumberOfRecordsForAbstractType is not implemented");
 	}
 
 	public SqlDatabaseFactory onlyForTestGetSqlDatabaseFactory() {
