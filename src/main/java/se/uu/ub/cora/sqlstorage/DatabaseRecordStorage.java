@@ -194,7 +194,7 @@ public class DatabaseRecordStorage implements RecordStorage {
 	private StorageReadResult readAndConvertDataList(String type, TableFacade tableFacade,
 			DataGroup filter) {
 		List<Row> readRows = readRowsFromDatabase(type, tableFacade, filter);
-		long totalNumberOfMatches = readNumberForTypeAndFilter(type, filter, tableFacade);
+		long totalNumberOfMatches = readNumberForType(type, tableFacade);
 		StorageReadResult readResult = convertRowsToListOfDataGroups(readRows);
 		readResult.totalNumberOfMatches = totalNumberOfMatches;
 		return readResult;
@@ -266,19 +266,17 @@ public class DatabaseRecordStorage implements RecordStorage {
 	@Override
 	public long getTotalNumberOfRecordsForType(String type, DataGroup filter) {
 		try (TableFacade tableFacade = sqlDatabaseFactory.factorTableFacade()) {
-			return readNumberForTypeAndFilter(type, filter, tableFacade);
+			return readNumberForType(type, tableFacade);
 		} catch (SqlDatabaseException e) {
 			throw new RecordNotFoundException("RecordType: " + type + ", not found in storage.", e);
 		}
 	}
 
-	private long readNumberForTypeAndFilter(String type, DataGroup filter,
-			TableFacade tableFacade) {
-		return readFromDatabaseForTypeAndFilter(type, filter, tableFacade);
+	private long readNumberForType(String type, TableFacade tableFacade) {
+		return readFromDatabaseForTypeAndFilter(type, tableFacade);
 	}
 
-	private long readFromDatabaseForTypeAndFilter(String type, DataGroup filter,
-			TableFacade tableFacade) {
+	private long readFromDatabaseForTypeAndFilter(String type, TableFacade tableFacade) {
 		TableQuery tableQuery = assembleCountQuery(type);
 		return tableFacade.readNumberOfRows(tableQuery);
 	}
