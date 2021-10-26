@@ -117,11 +117,14 @@ public class DatabaseRecordStorage implements RecordStorage {
 					"Record with type: " + type + ", and id: " + id + " already exists in storage.",
 					e);
 		} catch (Exception e) {
-			throw StorageException.withMessageAndException(
-					"Storage exception when updating record with recordType: " + type + " with id: "
-							+ id,
-					e);
+			throw createStorageExceptionUsingAction(type, id, "creating", e);
 		}
+	}
+
+	private StorageException createStorageExceptionUsingAction(String type, String id,
+			String action, Exception exception) {
+		return StorageException.withMessageAndException("Storage exception when " + action
+				+ " record with recordType: " + type + " with id: " + id, exception);
 	}
 
 	private String convertDataGroupToJsonString(DataGroup dataGroup) {
@@ -147,7 +150,13 @@ public class DatabaseRecordStorage implements RecordStorage {
 
 	@Override
 	public void deleteByTypeAndId(String type, String id) {
-		throw NotImplementedException.withMessage("deleteByTypeAndId is not implemented");
+		try (TableFacade tableFacade = sqlDatabaseFactory.factorTableFacade()) {
+			TableQuery tableQuery = factorTableQueryWithTablePrefix(type);
+			tableQuery.addCondition("id", id);
+			tableFacade.deleteRowsForQuery(tableQuery);
+		} catch (Exception e) {
+			throw createStorageExceptionUsingAction(type, id, "deleting", e);
+		}
 	}
 
 	@Override
@@ -163,10 +172,7 @@ public class DatabaseRecordStorage implements RecordStorage {
 			TableQuery tableQuery = assembleUpdateQuery(type, id, dataDivider, dataRecordJson);
 			tableFacade.updateRowsUsingQuery(tableQuery);
 		} catch (Exception e) {
-			throw StorageException.withMessageAndException(
-					"Storage exception when updating record with recordType: " + type + " with id: "
-							+ id,
-					e);
+			throw createStorageExceptionUsingAction(type, id, "updating", e);
 		}
 	}
 
@@ -193,8 +199,13 @@ public class DatabaseRecordStorage implements RecordStorage {
 		try (TableFacade tableFacade = sqlDatabaseFactory.factorTableFacade()) {
 			return readAndConvertDataList(type, tableFacade, filter);
 		} catch (SqlDatabaseException e) {
-			throw new RecordNotFoundException("RecordType: " + type + ", not found in storage.", e);
+			throw createRecordNotFoundExceptionForType(type, e);
 		}
+	}
+
+	private RecordNotFoundException createRecordNotFoundExceptionForType(String type,
+			SqlDatabaseException e) {
+		return new RecordNotFoundException("RecordType: " + type + ", not found in storage.", e);
 	}
 
 	private StorageReadResult readAndConvertDataList(String type, TableFacade tableFacade,
@@ -274,7 +285,7 @@ public class DatabaseRecordStorage implements RecordStorage {
 		try (TableFacade tableFacade = sqlDatabaseFactory.factorTableFacade()) {
 			return readNumberForType(type, tableFacade);
 		} catch (SqlDatabaseException e) {
-			throw new RecordNotFoundException("RecordType: " + type + ", not found in storage.", e);
+			throw createRecordNotFoundExceptionForType(type, e);
 		}
 	}
 

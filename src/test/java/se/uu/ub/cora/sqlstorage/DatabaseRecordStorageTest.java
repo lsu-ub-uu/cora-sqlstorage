@@ -421,7 +421,7 @@ public class DatabaseRecordStorageTest {
 		} catch (Exception e) {
 			assertTrue(e instanceof StorageException);
 			assertEquals(e.getMessage(),
-					"Storage exception when updating record with recordType: someType with id: someId");
+					"Storage exception when creating record with recordType: someType with id: someId");
 			assertEquals(e.getCause().getMessage(), "Error from spy");
 
 		}
@@ -457,7 +457,6 @@ public class DatabaseRecordStorageTest {
 		assertEquals(jsonObject2.getType(), "json");
 		assertEquals(jsonObject2.getValue(), dataRecordJson);
 
-		// tableQuerySpy.MCR.assertParameters("addParameter", 1, "record", jsonObject2.getValue());
 		tableQuerySpy.MCR.assertParameters("addCondition", 0, "id", someId);
 
 		TableFacadeSpy firstFactoredTableFacadeSpy = getFirstFactoredTableFacadeSpy();
@@ -485,7 +484,6 @@ public class DatabaseRecordStorageTest {
 		assertEquals(jsonObject2.getType(), "json");
 		assertEquals(jsonObject2.getValue(), dataRecordJson);
 
-		// tableQuerySpy.MCR.assertParameters("addParameter", 1, "record", jsonObject2.getValue());
 		tableQuerySpy.MCR.assertParameters("addCondition", 0, "id", someId);
 
 		TableFacadeSpy firstFactoredTableFacadeSpy = getFirstFactoredTableFacadeSpy();
@@ -509,10 +507,42 @@ public class DatabaseRecordStorageTest {
 		}
 	}
 
-	@Test(expectedExceptions = NotImplementedException.class, expectedExceptionsMessageRegExp = ""
-			+ "deleteByTypeAndId is not implemented")
+	@Test
 	public void testDeleteByTypeAndId() {
 		storage.deleteByTypeAndId("someType", "someId");
+
+		sqlDatabaseFactorySpy.MCR.assertParameters("factorTableQuery", 0, "record_someType");
+		TableQuerySpy tableQuerySpy = getFirstFactoredTableQuery();
+
+		tableQuerySpy.MCR.assertParameters("addCondition", 0, "id", someId);
+
+		TableFacadeSpy firstFactoredTableFacadeSpy = getFirstFactoredTableFacadeSpy();
+
+		firstFactoredTableFacadeSpy.MCR.assertParameters("deleteRowsForQuery", 0, tableQuerySpy);
+	}
+
+	@Test
+	public void testDeleteThrowsSQlDatabaseException() throws Exception {
+		sqlDatabaseFactorySpy.throwExceptionFromTableFacadeOnDelete = true;
+
+		try {
+			storage.deleteByTypeAndId("someType", "someId");
+			makeSureErrorIsThrownFromAboveStatements();
+		} catch (Exception e) {
+			assertTrue(e instanceof StorageException);
+			assertEquals(e.getMessage(),
+					"Storage exception when deleting record with recordType: someType with id: someId");
+			assertEquals(e.getCause().getMessage(), "Error from deleteRowsUsingQuery in tablespy");
+
+		}
+	}
+
+	@Test
+	public void testDeletedClosed() throws Exception {
+		storage.deleteByTypeAndId("someType", "someId");
+		TableFacadeSpy tableFacadeSpy = getFirstFactoredTableFacadeSpy();
+		tableFacadeSpy.MCR.assertMethodWasCalled("close");
+
 	}
 
 	@Test(expectedExceptions = NotImplementedException.class, expectedExceptionsMessageRegExp = ""

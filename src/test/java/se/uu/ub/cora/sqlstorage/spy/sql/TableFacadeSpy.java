@@ -31,9 +31,10 @@ import se.uu.ub.cora.testutils.mcr.MethodCallRecorder;
 public class TableFacadeSpy implements TableFacade {
 	public MethodCallRecorder MCR = new MethodCallRecorder();
 	public boolean throwExceptionOnRead = false;
+	public boolean throwExceptionOnUpdate = false;
+	public boolean throwExceptionOnDelete = false;
 	public long totalNumberOfRecordsForType = 0;
 	public boolean throwDuplicateException = false;
-	public boolean throwExceptionOnUpdate = false;
 	public boolean throwSqlException = false;
 
 	@Override
@@ -108,6 +109,9 @@ public class TableFacadeSpy implements TableFacade {
 	@Override
 	public void deleteRowsForQuery(TableQuery tableQuery) {
 		MCR.addCall("tableQuery", tableQuery);
+		if (throwExceptionOnDelete) {
+			throw SqlDatabaseException.withMessage("Error from deleteRowsUsingQuery in tablespy");
+		}
 	}
 
 	@Override
