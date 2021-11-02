@@ -45,9 +45,9 @@
 	</properties>
 
 	<scm>
-		<connection>scm:git:https://github.com/olovm/cora-sqlstorage.git</connection>
-		<developerConnection>scm:git:https://github.com/olovm/cora-sqlstorage.git</developerConnection>
-		<url>https://github.com/olovm/cora-sqlstorage.git</url>
+		<connection>scm:git:https://github.com/lsu-ub-uu/cora-sqlstorage.git</connection>
+		<developerConnection>scm:git:https://github.com/lsu-ub-uu/cora-sqlstorage.git</developerConnection>
+		<url>https://github.com/lsu-ub-uu/cora-sqlstorage.git</url>
 	</scm>
 
 
