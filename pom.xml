@@ -36,12 +36,12 @@
 	<url>http://maven.apache.org</url>
 
 	<properties>
-		<storage.version>5.0-SNAPSHOT</storage.version>
-		<data.version>5.1.0</data.version>
-		<json.version>3.0-SNAPSHOT</json.version>
-		<sqldatabase.version>5.0-SNAPSHOT</sqldatabase.version>
-		<logger.version>2.3.0</logger.version>
-		<testutils.version>1.1.1</testutils.version>
+		<storage.version>5.0.0</storage.version>
+		<data.version>5.2.0</data.version>
+		<json.version>3.0.0</json.version>
+		<sqldatabase.version>5.0.0</sqldatabase.version>
+		<logger.version>2.4.0</logger.version>
+		<testutils.version>1.2.0</testutils.version>
 	</properties>
 
 	<scm>
