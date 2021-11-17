@@ -240,6 +240,7 @@ public class DatabaseRecordStorage implements RecordStorage {
 		TableQuery tableQuery = factorTableQueryWithTablePrefix(type);
 		possiblySetFromNoInQueryFromFilter(tableQuery, filter);
 		possiblySetToNoInQueryFromFilter(tableQuery, filter);
+		tableQuery.addOrderByDesc("id");
 		return tableQuery;
 	}
 

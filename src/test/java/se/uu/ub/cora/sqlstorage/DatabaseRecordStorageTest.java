@@ -181,7 +181,7 @@ public class DatabaseRecordStorageTest {
 
 		TableFacadeSpy tableFacadeSpy = getFirstFactoredTableFacadeSpy();
 		tableFacadeSpy.MCR.assertParameters("readRowsForQuery", 0, tableQuerySpy);
-
+		tableQuerySpy.MCR.assertParameter("addOrderByDesc", 0, "column", "id");
 	}
 
 	@Test
@@ -257,7 +257,7 @@ public class DatabaseRecordStorageTest {
 
 		tableQuerySpy.MCR.assertParameters("setFromNo", 0, 1L);
 		tableQuerySpy.MCR.assertParameters("setToNo", 0, 10L);
-
+		tableQuerySpy.MCR.assertParameter("addOrderByDesc", 0, "column", "id");
 	}
 
 	@Test
@@ -270,6 +270,7 @@ public class DatabaseRecordStorageTest {
 
 		tableQuerySpy.MCR.assertParameters("setFromNo", 0, 10L);
 		tableQuerySpy.MCR.assertParameters("setToNo", 0, 100L);
+		tableQuerySpy.MCR.assertParameter("addOrderByDesc", 0, "column", "id");
 	}
 
 	@Test
@@ -282,6 +283,7 @@ public class DatabaseRecordStorageTest {
 
 		tableQuerySpy.MCR.assertParameters("setFromNo", 0, 10L);
 		tableQuerySpy.MCR.assertMethodNotCalled("setToNo");
+		tableQuerySpy.MCR.assertParameter("addOrderByDesc", 0, "column", "id");
 
 		assertEquals(result.start, 0);
 		assertEquals(result.totalNumberOfMatches, 747);
@@ -299,6 +301,7 @@ public class DatabaseRecordStorageTest {
 		tableQuerySpy.MCR.assertMethodNotCalled("setFromNo");
 		assertEquals(result.totalNumberOfMatches, 747);
 		tableQuerySpy.MCR.assertParameters("setToNo", 0, 3L);
+		tableQuerySpy.MCR.assertParameter("addOrderByDesc", 0, "column", "id");
 	}
 
 	@Test
