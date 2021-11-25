@@ -38,7 +38,7 @@
 		<storage.version>5.2.0</storage.version>
 		<data.version>5.3.0</data.version>
 		<json.version>3.1.0</json.version>
-		<sqldatabase.version>5.1.0</sqldatabase.version>
+		<sqldatabase.version>6.0-SNAPSHOT</sqldatabase.version>
 		<logger.version>2.4.0</logger.version>
 		<testutils.version>1.2.0</testutils.version>
 	</properties>

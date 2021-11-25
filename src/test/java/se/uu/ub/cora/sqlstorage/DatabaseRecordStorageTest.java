@@ -78,6 +78,7 @@ public class DatabaseRecordStorageTest {
 		DataToJsonConverterProvider
 				.setDataToJsonConverterFactoryCreator(dataToJsonConverterFactoryCreatorSpy);
 		sqlDatabaseFactorySpy = new SqlDatabaseFactorySpy();
+		sqlDatabaseFactorySpy.numberOfAffectedRows = 1;
 		jsonParserSpy = new JsonParserSpy();
 		storage = new DatabaseRecordStorage(sqlDatabaseFactorySpy, jsonParserSpy);
 
@@ -511,6 +512,22 @@ public class DatabaseRecordStorageTest {
 	}
 
 	@Test
+	public void testUpdateNoRecordUpdated() throws Exception {
+		sqlDatabaseFactorySpy.numberOfAffectedRows = 0;
+
+		try {
+			storage.update(someType, someId, dataRecord, emptyCollectedTerms, emptyLinkList,
+					dataDivider);
+			makeSureErrorIsThrownFromAboveStatements();
+
+		} catch (Exception e) {
+			assertTrue(e instanceof RecordNotFoundException);
+			assertEquals(e.getMessage(),
+					"Record not found when updating record with recordType: someType and id: someId");
+		}
+	}
+
+	@Test
 	public void testDeleteByTypeAndId() {
 		storage.deleteByTypeAndId("someType", "someId");
 
@@ -545,7 +562,21 @@ public class DatabaseRecordStorageTest {
 		storage.deleteByTypeAndId("someType", "someId");
 		TableFacadeSpy tableFacadeSpy = getFirstFactoredTableFacadeSpy();
 		tableFacadeSpy.MCR.assertMethodWasCalled("close");
+	}
 
+	@Test
+	public void testDeleteNoRecordUpdated() throws Exception {
+		sqlDatabaseFactorySpy.numberOfAffectedRows = 0;
+
+		try {
+			storage.deleteByTypeAndId("someType", "someId");
+			makeSureErrorIsThrownFromAboveStatements();
+
+		} catch (Exception e) {
+			assertTrue(e instanceof RecordNotFoundException);
+			assertEquals(e.getMessage(),
+					"Record not found when deleting record with recordType: someType and id: someId");
+		}
 	}
 
 	@Test(expectedExceptions = NotImplementedException.class, expectedExceptionsMessageRegExp = ""

@@ -36,6 +36,7 @@ public class TableFacadeSpy implements TableFacade {
 	public long totalNumberOfRecordsForType = 0;
 	public boolean throwDuplicateException = false;
 	public boolean throwSqlException = false;
+	public int numberOfAffectedRows = 0;
 
 	@Override
 	public void close() {
@@ -95,7 +96,7 @@ public class TableFacadeSpy implements TableFacade {
 	}
 
 	@Override
-	public void updateRowsUsingQuery(TableQuery tableQuery) {
+	public int updateRowsUsingQuery(TableQuery tableQuery) {
 		MCR.addCall("tableQuery", tableQuery);
 
 		if (throwExceptionOnUpdate) {
@@ -104,14 +105,19 @@ public class TableFacadeSpy implements TableFacade {
 		if (throwDuplicateException) {
 			throw SqlConflictException.withMessage("Error from updateRowsUsingQuery in tablespy");
 		}
+
+		MCR.addReturned(numberOfAffectedRows);
+		return numberOfAffectedRows;
 	}
 
 	@Override
-	public void deleteRowsForQuery(TableQuery tableQuery) {
+	public int deleteRowsForQuery(TableQuery tableQuery) {
 		MCR.addCall("tableQuery", tableQuery);
 		if (throwExceptionOnDelete) {
 			throw SqlDatabaseException.withMessage("Error from deleteRowsUsingQuery in tablespy");
 		}
+		MCR.addReturned(numberOfAffectedRows);
+		return numberOfAffectedRows;
 	}
 
 	@Override

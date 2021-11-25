@@ -150,13 +150,15 @@ public class DatabaseRecordStorage implements RecordStorage {
 
 	@Override
 	public void deleteByTypeAndId(String type, String id) {
+		int deletedRows = 0;
 		try (TableFacade tableFacade = sqlDatabaseFactory.factorTableFacade()) {
 			TableQuery tableQuery = factorTableQueryWithTablePrefix(type);
 			tableQuery.addCondition("id", id);
-			tableFacade.deleteRowsForQuery(tableQuery);
+			deletedRows = tableFacade.deleteRowsForQuery(tableQuery);
 		} catch (Exception e) {
 			throw createStorageExceptionUsingAction(type, id, "deleting", e);
 		}
+		throwRecordNotFoundExceptionIfAffectedRowsIsZero(type, id, deletedRows, "deleting");
 	}
 
 	@Override
@@ -167,12 +169,22 @@ public class DatabaseRecordStorage implements RecordStorage {
 	@Override
 	public void update(String type, String id, DataGroup dataRecord, DataGroup collectedTerms,
 			DataGroup linkList, String dataDivider) {
+		int updatedRows = 0;
 		try (TableFacade tableFacade = sqlDatabaseFactory.factorTableFacade()) {
 			String dataRecordJson = convertDataGroupToJsonString(dataRecord);
 			TableQuery tableQuery = assembleUpdateQuery(type, id, dataDivider, dataRecordJson);
-			tableFacade.updateRowsUsingQuery(tableQuery);
+			updatedRows = tableFacade.updateRowsUsingQuery(tableQuery);
 		} catch (Exception e) {
 			throw createStorageExceptionUsingAction(type, id, "updating", e);
+		}
+		throwRecordNotFoundExceptionIfAffectedRowsIsZero(type, id, updatedRows, "updating");
+	}
+
+	private void throwRecordNotFoundExceptionIfAffectedRowsIsZero(String type, String id,
+			int affectedRows, String storageAction) {
+		if (affectedRows == 0) {
+			throw new RecordNotFoundException("Record not found when " + storageAction
+					+ " record with recordType: " + type + " and id: " + id);
 		}
 	}
 
