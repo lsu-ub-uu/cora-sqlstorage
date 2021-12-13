@@ -19,6 +19,7 @@
 package se.uu.ub.cora.sqlstorage;
 
 import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertTrue;
 
@@ -359,7 +360,6 @@ public class DatabaseRecordStorageTest {
 
 	@Test
 	public void testCreateParametersPassedOn() throws Exception {
-
 		storage.create(someType, someId, dataRecord, emptyCollectedTerms, emptyLinkList,
 				dataDivider);
 
@@ -378,7 +378,6 @@ public class DatabaseRecordStorageTest {
 				.getValueForMethodNameAndCallNumberAndParameterName("addParameter", 2, "value");
 		assertEquals(jsonObject2.getType(), "json");
 		assertEquals(jsonObject2.getValue(), dataRecordJson);
-		// tableQuerySpy.MCR.assertParameters("addParameter", 2, "record", dataRecordJson);
 
 		TableFacadeSpy firstFactoredTableFacadeSpy = getFirstFactoredTableFacadeSpy();
 		firstFactoredTableFacadeSpy.MCR.assertParameters("insertRowUsingQuery", 0, tableQuerySpy);
@@ -433,7 +432,6 @@ public class DatabaseRecordStorageTest {
 
 	@Test
 	public void testUpdateClosed() throws Exception {
-
 		storage.update(someType, someId, dataRecord, emptyCollectedTerms, emptyLinkList,
 				dataDivider);
 		TableFacadeSpy tableFacadeSpy = getFirstFactoredTableFacadeSpy();
@@ -603,10 +601,62 @@ public class DatabaseRecordStorageTest {
 		storage.generateLinkCollectionPointingToRecord("someType", "someId");
 	}
 
-	@Test(expectedExceptions = NotImplementedException.class, expectedExceptionsMessageRegExp = ""
-			+ "recordExistsForAbstractOrImplementingRecordTypeAndRecordId is not implemented")
-	public void testRecordExistsForAbstractOrImplementingRecordTypeAndRecordId() {
-		storage.recordExistsForAbstractOrImplementingRecordTypeAndRecordId("someType", "someId");
+	@Test
+	public void testRecordExists_notFound0() {
+		sqlDatabaseFactorySpy.totalNumberOfRecordsForType = 0;
+		assertFalse(storage.recordExistsForAbstractOrImplementingRecordTypeAndRecordId("someType",
+				"someId"));
+	}
+
+	@Test
+	public void testRecordExists_TableFacadeFactoredAndCloseCalled() throws Exception {
+		assertFalse(storage.recordExistsForAbstractOrImplementingRecordTypeAndRecordId("someType",
+				"someId"));
+
+		TableFacadeSpy tableFacadeSpy = getFirstFactoredTableFacadeSpy();
+		tableFacadeSpy.MCR.assertMethodWasCalled("close");
+	}
+
+	@Test
+	public void testRecordExists_NotFound() throws Exception {
+		sqlDatabaseFactorySpy.throwExceptionFromTableFacadeOnRead = true;
+		try {
+			assertFalse(storage.recordExistsForAbstractOrImplementingRecordTypeAndRecordId(
+					"someType", "someId"));
+			makeSureErrorIsThrownFromAboveStatements();
+
+		} catch (Exception e) {
+			assertTrue(e instanceof RecordNotFoundException);
+			assertEquals(e.getMessage(),
+					"RecordType: someType, with id: someId, not found in storage.");
+			assertEquals(e.getCause().getMessage(), "Error from readNumberOfRows in tablespy");
+		}
+	}
+
+	@Test
+	public void testRecordExists() throws Exception {
+		sqlDatabaseFactorySpy.totalNumberOfRecordsForType = 1;
+
+		boolean recordExists = storage
+				.recordExistsForAbstractOrImplementingRecordTypeAndRecordId("someType", "someId");
+
+		TableQuerySpy tableQuerySpy = getFirstFactoredTableQuery();
+		TableFacadeSpy tableFacadeSpy = getFirstFactoredTableFacadeSpy();
+
+		sqlDatabaseFactorySpy.MCR.assertParameter("factorTableQuery", 0, "tableName",
+				"record_someType");
+
+		tableQuerySpy.MCR.assertParameters("addCondition", 0, "id", "someId");
+
+		tableFacadeSpy.MCR.assertParameters("readNumberOfRows", 0, tableQuerySpy);
+		assertTrue(recordExists);
+	}
+
+	@Test
+	public void testRecordExists_Found747() {
+		sqlDatabaseFactorySpy.totalNumberOfRecordsForType = 747;
+		assertTrue(storage.recordExistsForAbstractOrImplementingRecordTypeAndRecordId("someType",
+				"someId"));
 	}
 
 	@Test(expectedExceptions = NotImplementedException.class, expectedExceptionsMessageRegExp = ""

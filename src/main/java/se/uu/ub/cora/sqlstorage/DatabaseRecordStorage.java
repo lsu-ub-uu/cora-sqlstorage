@@ -88,12 +88,12 @@ public class DatabaseRecordStorage implements RecordStorage {
 	}
 
 	private TableQuery assembleReadOneQuery(String type, String id) {
-		TableQuery tableQuery = factorTableQueryWithTablePrefix(type);
+		TableQuery tableQuery = factorTableQueryWithTablePrefixForType(type);
 		tableQuery.addCondition(ID_COLUMN, id);
 		return tableQuery;
 	}
 
-	private TableQuery factorTableQueryWithTablePrefix(String type) {
+	private TableQuery factorTableQueryWithTablePrefixForType(String type) {
 		return sqlDatabaseFactory.factorTableQuery("record_" + type);
 	}
 
@@ -140,7 +140,7 @@ public class DatabaseRecordStorage implements RecordStorage {
 
 	private TableQuery assembleCreateQuery(String type, String id, String dataDivider,
 			String dataRecord) throws SQLException {
-		TableQuery tableQuery = factorTableQueryWithTablePrefix(type);
+		TableQuery tableQuery = factorTableQueryWithTablePrefixForType(type);
 		tableQuery.addParameter(ID_COLUMN, id);
 		tableQuery.addParameter(DATA_DIVIDER_COLUMN, dataDivider);
 		PGobject jsonObject = createJsonObject(dataRecord);
@@ -152,7 +152,7 @@ public class DatabaseRecordStorage implements RecordStorage {
 	public void deleteByTypeAndId(String type, String id) {
 		int deletedRows = 0;
 		try (TableFacade tableFacade = sqlDatabaseFactory.factorTableFacade()) {
-			TableQuery tableQuery = factorTableQueryWithTablePrefix(type);
+			TableQuery tableQuery = factorTableQueryWithTablePrefixForType(type);
 			tableQuery.addCondition("id", id);
 			deletedRows = tableFacade.deleteRowsForQuery(tableQuery);
 		} catch (Exception e) {
@@ -190,7 +190,7 @@ public class DatabaseRecordStorage implements RecordStorage {
 
 	private TableQuery assembleUpdateQuery(String type, String id, String dataDivider,
 			String dataRecord) throws SQLException {
-		TableQuery tableQuery = factorTableQueryWithTablePrefix(type);
+		TableQuery tableQuery = factorTableQueryWithTablePrefixForType(type);
 		tableQuery.addParameter(DATA_DIVIDER_COLUMN, dataDivider);
 		PGobject jsonObject = createJsonObject(dataRecord);
 
@@ -249,7 +249,7 @@ public class DatabaseRecordStorage implements RecordStorage {
 	}
 
 	private TableQuery assembleReadRowsQuery(String type, DataGroup filter) {
-		TableQuery tableQuery = factorTableQueryWithTablePrefix(type);
+		TableQuery tableQuery = factorTableQueryWithTablePrefixForType(type);
 		possiblySetFromNoInQueryFromFilter(tableQuery, filter);
 		possiblySetToNoInQueryFromFilter(tableQuery, filter);
 		tableQuery.addOrderByDesc("id");
@@ -289,8 +289,30 @@ public class DatabaseRecordStorage implements RecordStorage {
 	@Override
 	public boolean recordExistsForAbstractOrImplementingRecordTypeAndRecordId(String type,
 			String id) {
-		throw NotImplementedException.withMessage(
-				"recordExistsForAbstractOrImplementingRecordTypeAndRecordId is not implemented");
+		try (TableFacade tableFacade = sqlDatabaseFactory.factorTableFacade()) {
+			return tryToCheckIfRecordExistsForTypeAndId(type, id, tableFacade);
+		} catch (SqlDatabaseException e) {
+			throw createRecordNotFoundExceptionForExists(type, id, e);
+		}
+	}
+
+	private boolean tryToCheckIfRecordExistsForTypeAndId(String type, String id,
+			TableFacade tableFacade) {
+		long numberOfRows = readNumberOfRowsFromDatabaseForTypeAndId(type, id, tableFacade);
+		return numberOfRows > 0;
+	}
+
+	private long readNumberOfRowsFromDatabaseForTypeAndId(String type, String id,
+			TableFacade tableFacade) {
+		TableQuery tableQuery = factorTableQueryWithTablePrefixForType(type);
+		tableQuery.addCondition("id", id);
+		return tableFacade.readNumberOfRows(tableQuery);
+	}
+
+	private RecordNotFoundException createRecordNotFoundExceptionForExists(String type, String id,
+			SqlDatabaseException e) {
+		String errorString = "RecordType: %s, with id: %s, not found in storage.";
+		return new RecordNotFoundException(String.format(errorString, type, id), e);
 	}
 
 	@Override
@@ -307,12 +329,12 @@ public class DatabaseRecordStorage implements RecordStorage {
 	}
 
 	private long readFromDatabaseForTypeAndFilter(String type, TableFacade tableFacade) {
-		TableQuery tableQuery = assembleCountQuery(type);
+		TableQuery tableQuery = assembleCountQueryForType(type);
 		return tableFacade.readNumberOfRows(tableQuery);
 	}
 
-	private TableQuery assembleCountQuery(String type) {
-		return factorTableQueryWithTablePrefix(type);
+	private TableQuery assembleCountQueryForType(String type) {
+		return factorTableQueryWithTablePrefixForType(type);
 	}
 
 	@Override
