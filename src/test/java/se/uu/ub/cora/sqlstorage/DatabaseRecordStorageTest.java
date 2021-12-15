@@ -19,6 +19,7 @@
 package se.uu.ub.cora.sqlstorage;
 
 import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertTrue;
 
@@ -603,10 +604,30 @@ public class DatabaseRecordStorageTest {
 		storage.generateLinkCollectionPointingToRecord("someType", "someId");
 	}
 
-	@Test(expectedExceptions = NotImplementedException.class, expectedExceptionsMessageRegExp = ""
-			+ "recordExistsForAbstractOrImplementingRecordTypeAndRecordId is not implemented")
-	public void testRecordExistsForAbstractOrImplementingRecordTypeAndRecordId() {
-		storage.recordExistsForAbstractOrImplementingRecordTypeAndRecordId("someType", "someId");
+	@Test
+	public void testRecordExistsForAbstractOrImplementingRecordTypeAndRecordIdNoRecordFound() {
+		sqlDatabaseFactorySpy.throwExceptionFromTableFacadeOnRead = true;
+		boolean recordExists = storage
+				.recordExistsForAbstractOrImplementingRecordTypeAndRecordId("someType", "someId");
+		assertFalse(recordExists);
+	}
+
+	@Test
+	public void testRecordExistsForAbstractOrImplementingRecordTypeAndRecordIdRecordFound() {
+		boolean recordExists = storage
+				.recordExistsForAbstractOrImplementingRecordTypeAndRecordId("someType", "someId");
+
+		sqlDatabaseFactorySpy.MCR.assertParameter("factorTableQuery", 0, "tableName",
+				"record_someType");
+		TableQuerySpy tableQuery = (TableQuerySpy) sqlDatabaseFactorySpy.MCR
+				.getReturnValue("factorTableQuery", 0);
+		tableQuery.MCR.assertParameters("addCondition", 0, "id", "someId");
+
+		TableFacadeSpy tableFacade = (TableFacadeSpy) sqlDatabaseFactorySpy.MCR
+				.getReturnValue("factorTableFacade", 0);
+		tableFacade.MCR.assertParameter("readOneRowForQuery", 0, "tableQuery", tableQuery);
+
+		assertTrue(recordExists);
 	}
 
 	@Test(expectedExceptions = NotImplementedException.class, expectedExceptionsMessageRegExp = ""

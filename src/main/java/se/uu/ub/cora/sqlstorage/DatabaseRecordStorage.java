@@ -289,8 +289,12 @@ public class DatabaseRecordStorage implements RecordStorage {
 	@Override
 	public boolean recordExistsForAbstractOrImplementingRecordTypeAndRecordId(String type,
 			String id) {
-		throw NotImplementedException.withMessage(
-				"recordExistsForAbstractOrImplementingRecordTypeAndRecordId is not implemented");
+		try (TableFacade tableFacade = sqlDatabaseFactory.factorTableFacade()) {
+			readFromDatabase(type, id, tableFacade);
+			return true;
+		} catch (SqlDatabaseException e) {
+			return false;
+		}
 	}
 
 	@Override
