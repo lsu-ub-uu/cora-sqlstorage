@@ -26,6 +26,7 @@ import java.util.List;
 import org.postgresql.util.PGobject;
 
 import se.uu.ub.cora.data.DataGroup;
+import se.uu.ub.cora.data.collectterms.StorageTerm;
 import se.uu.ub.cora.data.converter.DataToJsonConverter;
 import se.uu.ub.cora.data.converter.DataToJsonConverterFactory;
 import se.uu.ub.cora.data.converter.DataToJsonConverterProvider;
@@ -106,7 +107,7 @@ public class DatabaseRecordStorage implements RecordStorage {
 	}
 
 	@Override
-	public void create(String type, String id, DataGroup dataRecord, DataGroup collectedTerms,
+	public void create(String type, String id, DataGroup dataRecord, List<StorageTerm> storageTerms,
 			DataGroup linkList, String dataDivider) {
 		try (TableFacade tableFacade = sqlDatabaseFactory.factorTableFacade()) {
 			String dataRecordJson = convertDataGroupToJsonString(dataRecord);
@@ -167,7 +168,7 @@ public class DatabaseRecordStorage implements RecordStorage {
 	}
 
 	@Override
-	public void update(String type, String id, DataGroup dataRecord, DataGroup collectedTerms,
+	public void update(String type, String id, DataGroup dataRecord, List<StorageTerm> storageTerms,
 			DataGroup linkList, String dataDivider) {
 		int updatedRows = 0;
 		try (TableFacade tableFacade = sqlDatabaseFactory.factorTableFacade()) {

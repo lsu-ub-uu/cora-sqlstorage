@@ -31,6 +31,7 @@ import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
 import se.uu.ub.cora.data.DataGroup;
+import se.uu.ub.cora.data.collectterms.StorageTerm;
 import se.uu.ub.cora.data.converter.DataToJsonConverterProvider;
 import se.uu.ub.cora.data.converter.JsonToDataConverterProvider;
 import se.uu.ub.cora.json.parser.JsonValue;
@@ -59,7 +60,7 @@ public class DatabaseRecordStorageTest {
 	private JsonToDataConverterFactorySpy factoryCreatorSpy;
 	private DataGroup emptyFilterSpy;
 	private FilterDataGroupSpy filterSpy;
-	private DataGroup emptyCollectedTerms;
+	private List<StorageTerm> emptyStorageTerms;
 	private DataGroup emptyLinkList;
 	private DataToJsonConverterFactoryCreatorSpy dataToJsonConverterFactoryCreatorSpy;
 	private DataGroup dataRecord;
@@ -71,7 +72,7 @@ public class DatabaseRecordStorageTest {
 	public void beforeMethod() {
 		filterSpy = new FilterDataGroupSpy();
 		emptyFilterSpy = new DataGroupSpy();
-		emptyCollectedTerms = new DataGroupSpy();
+		emptyStorageTerms = Collections.emptyList();
 		emptyLinkList = new DataGroupSpy();
 		factoryCreatorSpy = new JsonToDataConverterFactorySpy();
 		JsonToDataConverterProvider.setJsonToDataConverterFactory(factoryCreatorSpy);
@@ -351,7 +352,7 @@ public class DatabaseRecordStorageTest {
 		DataGroup dataRecord = new DataGroupSpy();
 		String someDataDivider = "someDataDivider";
 
-		storage.create("someType", "someId", dataRecord, emptyCollectedTerms, emptyLinkList,
+		storage.create("someType", "someId", dataRecord, emptyStorageTerms, emptyLinkList,
 				someDataDivider);
 
 		TableFacadeSpy tableFacadeSpy = getFirstFactoredTableFacadeSpy();
@@ -360,8 +361,7 @@ public class DatabaseRecordStorageTest {
 
 	@Test
 	public void testCreateParametersPassedOn() throws Exception {
-		storage.create(someType, someId, dataRecord, emptyCollectedTerms, emptyLinkList,
-				dataDivider);
+		storage.create(someType, someId, dataRecord, emptyStorageTerms, emptyLinkList, dataDivider);
 
 		String dataRecordJson = getConvertedJson(dataRecord);
 
@@ -401,7 +401,7 @@ public class DatabaseRecordStorageTest {
 		sqlDatabaseFactorySpy.throwDuplicateExceptionFromTableFacade = true;
 
 		try {
-			storage.create(someType, someId, dataRecord, emptyCollectedTerms, emptyLinkList,
+			storage.create(someType, someId, dataRecord, emptyStorageTerms, emptyLinkList,
 					dataDivider);
 			makeSureErrorIsThrownFromAboveStatements();
 		} catch (Exception e) {
@@ -418,7 +418,7 @@ public class DatabaseRecordStorageTest {
 		sqlDatabaseFactorySpy.throwSqlExceptionFromTableFacade = true;
 
 		try {
-			storage.create(someType, someId, dataRecord, emptyCollectedTerms, emptyLinkList,
+			storage.create(someType, someId, dataRecord, emptyStorageTerms, emptyLinkList,
 					dataDivider);
 			makeSureErrorIsThrownFromAboveStatements();
 		} catch (Exception e) {
@@ -432,8 +432,7 @@ public class DatabaseRecordStorageTest {
 
 	@Test
 	public void testUpdateClosed() throws Exception {
-		storage.update(someType, someId, dataRecord, emptyCollectedTerms, emptyLinkList,
-				dataDivider);
+		storage.update(someType, someId, dataRecord, emptyStorageTerms, emptyLinkList, dataDivider);
 		TableFacadeSpy tableFacadeSpy = getFirstFactoredTableFacadeSpy();
 		tableFacadeSpy.MCR.assertMethodWasCalled("close");
 
@@ -442,8 +441,7 @@ public class DatabaseRecordStorageTest {
 	@Test
 	public void testUpdateParametersPassedOn() throws Exception {
 
-		storage.update(someType, someId, dataRecord, emptyCollectedTerms, emptyLinkList,
-				dataDivider);
+		storage.update(someType, someId, dataRecord, emptyStorageTerms, emptyLinkList, dataDivider);
 
 		String dataRecordJson = getConvertedJson(dataRecord);
 
@@ -469,8 +467,7 @@ public class DatabaseRecordStorageTest {
 	@Test
 	public void testUpdateParameterRecordNotValidJson() throws Exception {
 
-		storage.update(someType, someId, dataRecord, emptyCollectedTerms, emptyLinkList,
-				dataDivider);
+		storage.update(someType, someId, dataRecord, emptyStorageTerms, emptyLinkList, dataDivider);
 
 		String dataRecordJson = getConvertedJson(dataRecord);
 
@@ -497,7 +494,7 @@ public class DatabaseRecordStorageTest {
 	public void testUpdateTypeOrIdNotFound() throws Exception {
 		sqlDatabaseFactorySpy.throwExceptionFromTableFacadeOnUpdate = true;
 		try {
-			storage.update(someType, someId, dataRecord, emptyCollectedTerms, emptyLinkList,
+			storage.update(someType, someId, dataRecord, emptyStorageTerms, emptyLinkList,
 					dataDivider);
 			makeSureErrorIsThrownFromAboveStatements();
 
@@ -514,7 +511,7 @@ public class DatabaseRecordStorageTest {
 		sqlDatabaseFactorySpy.numberOfAffectedRows = 0;
 
 		try {
-			storage.update(someType, someId, dataRecord, emptyCollectedTerms, emptyLinkList,
+			storage.update(someType, someId, dataRecord, emptyStorageTerms, emptyLinkList,
 					dataDivider);
 			makeSureErrorIsThrownFromAboveStatements();
 
