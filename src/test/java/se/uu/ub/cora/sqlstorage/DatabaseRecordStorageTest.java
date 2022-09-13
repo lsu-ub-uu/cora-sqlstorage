@@ -23,6 +23,7 @@ import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertTrue;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
@@ -31,7 +32,8 @@ import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
 import se.uu.ub.cora.data.DataGroup;
-import se.uu.ub.cora.data.collectterms.StorageTerm;
+import se.uu.ub.cora.data.collected.RecordToRecordLink;
+import se.uu.ub.cora.data.collected.StorageTerm;
 import se.uu.ub.cora.data.converter.DataToJsonConverterProvider;
 import se.uu.ub.cora.data.converter.JsonToDataConverterProvider;
 import se.uu.ub.cora.json.parser.JsonValue;
@@ -61,7 +63,7 @@ public class DatabaseRecordStorageTest {
 	private DataGroup emptyFilterSpy;
 	private FilterDataGroupSpy filterSpy;
 	private List<StorageTerm> emptyStorageTerms;
-	private DataGroup emptyLinkList;
+	private List<RecordToRecordLink> emptyLinkList;
 	private DataToJsonConverterFactoryCreatorSpy dataToJsonConverterFactoryCreatorSpy;
 	private DataGroup dataRecord;
 	private String dataDivider;
@@ -73,7 +75,7 @@ public class DatabaseRecordStorageTest {
 		filterSpy = new FilterDataGroupSpy();
 		emptyFilterSpy = new DataGroupSpy();
 		emptyStorageTerms = Collections.emptyList();
-		emptyLinkList = new DataGroupSpy();
+		emptyLinkList = new ArrayList<>();
 		factoryCreatorSpy = new JsonToDataConverterFactorySpy();
 		JsonToDataConverterProvider.setJsonToDataConverterFactory(factoryCreatorSpy);
 		dataToJsonConverterFactoryCreatorSpy = new DataToJsonConverterFactoryCreatorSpy();

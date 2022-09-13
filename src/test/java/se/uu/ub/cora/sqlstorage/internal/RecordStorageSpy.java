@@ -4,7 +4,8 @@ import java.util.Collection;
 import java.util.List;
 
 import se.uu.ub.cora.data.DataGroup;
-import se.uu.ub.cora.data.collectterms.StorageTerm;
+import se.uu.ub.cora.data.collected.RecordToRecordLink;
+import se.uu.ub.cora.data.collected.StorageTerm;
 import se.uu.ub.cora.json.parser.JsonParser;
 import se.uu.ub.cora.sqldatabase.SqlDatabaseFactory;
 import se.uu.ub.cora.sqlstorage.DatabaseRecordStorage;
@@ -25,7 +26,7 @@ public class RecordStorageSpy extends DatabaseRecordStorage {
 
 	@Override
 	public void create(String type, String id, DataGroup record, List<StorageTerm> storageTerms,
-			DataGroup linkList, String dataDivider) {
+			List<RecordToRecordLink> links, String dataDivider) {
 		// TODO Auto-generated method stub
 
 	}
@@ -44,7 +45,7 @@ public class RecordStorageSpy extends DatabaseRecordStorage {
 
 	@Override
 	public void update(String type, String id, DataGroup record, List<StorageTerm> storageTerms,
-			DataGroup linkList, String dataDivider) {
+			List<RecordToRecordLink> links, String dataDivider) {
 		// TODO Auto-generated method stub
 
 	}
