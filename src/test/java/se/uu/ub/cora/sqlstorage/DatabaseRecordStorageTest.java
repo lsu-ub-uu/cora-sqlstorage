@@ -32,7 +32,7 @@ import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
 import se.uu.ub.cora.data.DataGroup;
-import se.uu.ub.cora.data.collected.RecordToRecordLink;
+import se.uu.ub.cora.data.collected.Link;
 import se.uu.ub.cora.data.collected.StorageTerm;
 import se.uu.ub.cora.data.converter.DataToJsonConverterProvider;
 import se.uu.ub.cora.data.converter.JsonToDataConverterProvider;
@@ -63,7 +63,7 @@ public class DatabaseRecordStorageTest {
 	private DataGroup emptyFilterSpy;
 	private FilterDataGroupSpy filterSpy;
 	private List<StorageTerm> emptyStorageTerms;
-	private List<RecordToRecordLink> emptyLinkList;
+	private List<Link> emptyLinkList;
 	private DataToJsonConverterFactoryCreatorSpy dataToJsonConverterFactoryCreatorSpy;
 	private DataGroup dataRecord;
 	private String dataDivider;
@@ -580,12 +580,6 @@ public class DatabaseRecordStorageTest {
 			+ "linksExistForRecord is not implemented")
 	public void testLinksExistForRecord() {
 		storage.linksExistForRecord("someType", "someId");
-	}
-
-	@Test(expectedExceptions = NotImplementedException.class, expectedExceptionsMessageRegExp = ""
-			+ "readLinkList is not implemented")
-	public void testReadLinkList() {
-		storage.readLinkList("someType", "someId");
 	}
 
 	@Test(expectedExceptions = NotImplementedException.class, expectedExceptionsMessageRegExp = ""

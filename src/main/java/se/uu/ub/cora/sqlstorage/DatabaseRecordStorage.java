@@ -26,7 +26,7 @@ import java.util.List;
 import org.postgresql.util.PGobject;
 
 import se.uu.ub.cora.data.DataGroup;
-import se.uu.ub.cora.data.collected.RecordToRecordLink;
+import se.uu.ub.cora.data.collected.Link;
 import se.uu.ub.cora.data.collected.StorageTerm;
 import se.uu.ub.cora.data.converter.DataToJsonConverter;
 import se.uu.ub.cora.data.converter.DataToJsonConverterFactory;
@@ -109,7 +109,7 @@ public class DatabaseRecordStorage implements RecordStorage {
 
 	@Override
 	public void create(String type, String id, DataGroup dataRecord, List<StorageTerm> storageTerms,
-			List<RecordToRecordLink> links, String dataDivider) {
+			List<Link> links, String dataDivider) {
 		try (TableFacade tableFacade = sqlDatabaseFactory.factorTableFacade()) {
 			String dataRecordJson = convertDataGroupToJsonString(dataRecord);
 			TableQuery tableQuery = assembleCreateQuery(type, id, dataDivider, dataRecordJson);
@@ -170,7 +170,7 @@ public class DatabaseRecordStorage implements RecordStorage {
 
 	@Override
 	public void update(String type, String id, DataGroup dataRecord, List<StorageTerm> storageTerms,
-			List<RecordToRecordLink> links, String dataDivider) {
+			List<Link> links, String dataDivider) {
 		int updatedRows = 0;
 		try (TableFacade tableFacade = sqlDatabaseFactory.factorTableFacade()) {
 			String dataRecordJson = convertDataGroupToJsonString(dataRecord);
@@ -275,11 +275,6 @@ public class DatabaseRecordStorage implements RecordStorage {
 	@Override
 	public StorageReadResult readAbstractList(String type, DataGroup filter) {
 		throw NotImplementedException.withMessage("readAbstractList is not implemented");
-	}
-
-	@Override
-	public DataGroup readLinkList(String type, String id) {
-		throw NotImplementedException.withMessage("readLinkList is not implemented");
 	}
 
 	@Override
