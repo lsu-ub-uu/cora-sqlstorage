@@ -37,6 +37,7 @@ public class TableFacadeSpy implements TableFacade {
 	public boolean throwDuplicateException = false;
 	public boolean throwSqlException = false;
 	public int numberOfAffectedRows = 0;
+	public boolean usingTransaction = false;
 
 	@Override
 	public void close() {
@@ -51,6 +52,14 @@ public class TableFacadeSpy implements TableFacade {
 		}
 		if (throwSqlException) {
 			throw SqlDatabaseException.withMessage("Error from spy");
+		}
+		if (usingTransaction && startTransactionNotCalled()) {
+			throw new RuntimeException(
+					"Error from SPY. StartTransaction should be called before insertRowUsingQuery. Controll the order of start end transaction.");
+		}
+		if (usingTransaction && MCR.methodWasCalled("endTransaction")) {
+			throw new RuntimeException(
+					"Error from SPY. endTransaction has been called before insertRowUsingQuery. Controll the order of start end transaction.");
 		}
 
 	}
@@ -136,6 +145,14 @@ public class TableFacadeSpy implements TableFacade {
 	@Override
 	public void endTransaction() {
 		MCR.addCall();
+		if (startTransactionNotCalled()) {
+			throw new RuntimeException(
+					"Error from SPY. StartTransaction should be called before endTransaction. Controll the order of start end transaction.");
+		}
+	}
+
+	private boolean startTransactionNotCalled() {
+		return !MCR.methodWasCalled("startTransaction");
 	}
 
 	@Override
