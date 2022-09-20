@@ -114,6 +114,10 @@ public class TableFacadeSpy implements TableFacade {
 		if (throwDuplicateException) {
 			throw SqlConflictException.withMessage("Error from updateRowsUsingQuery in tablespy");
 		}
+		if (usingTransaction && MCR.methodWasCalled("endTransaction")) {
+			throw new RuntimeException(
+					"Error from SPY. endTransaction has been called before updateRowsUsingQuery. Controll the order of start end transaction.");
+		}
 
 		MCR.addReturned(numberOfAffectedRows);
 		return numberOfAffectedRows;
@@ -124,6 +128,14 @@ public class TableFacadeSpy implements TableFacade {
 		MCR.addCall("tableQuery", tableQuery);
 		if (throwExceptionOnDelete) {
 			throw SqlDatabaseException.withMessage("Error from deleteRowsUsingQuery in tablespy");
+		}
+		if (usingTransaction && startTransactionNotCalled()) {
+			throw new RuntimeException(
+					"Error from SPY. StartTransaction should be called before insertRowUsingQuery. Controll the order of start end transaction.");
+		}
+		if (usingTransaction && MCR.methodWasCalled("endTransaction")) {
+			throw new RuntimeException(
+					"Error from SPY. endTransaction has been called before deleteRowsForQuery. Controll the order of start end transaction.");
 		}
 		MCR.addReturned(numberOfAffectedRows);
 		return numberOfAffectedRows;
