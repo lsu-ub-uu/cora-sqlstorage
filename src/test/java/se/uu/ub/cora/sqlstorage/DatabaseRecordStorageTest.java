@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 Uppsala University Library
+ * Copyright 2021, 2022 Uppsala University Library
  *
  * This file is part of Cora.
  *
@@ -104,17 +104,19 @@ public class DatabaseRecordStorageTest {
 	public void testReadParametersAddedToTableQueryAndPassedOn() throws Exception {
 		storage.read("someType", "someId");
 
-		sqlDatabaseFactorySpy.MCR.assertParameters("factorTableQuery", 0, "record_someType");
-		TableQuerySpy tableQuerySpy = getFirstFactoredTableQuery();
+		sqlDatabaseFactorySpy.MCR.assertParameters("factorTableQuery", 0, "record");
+		TableQuerySpy tableQuerySpy = getFactoredTableQueryUsingCallNumber(0);
 
-		tableQuerySpy.MCR.assertParameters("addCondition", 0, "id", "someId");
+		tableQuerySpy.MCR.assertParameters("addCondition", 0, "type", "someType");
+		tableQuerySpy.MCR.assertParameters("addCondition", 1, "id", "someId");
 
 		TableFacadeSpy tableFacadeSpy = getFirstFactoredTableFacadeSpy();
 		tableFacadeSpy.MCR.assertParameters("readOneRowForQuery", 0, tableQuerySpy);
 	}
 
-	private TableQuerySpy getFirstFactoredTableQuery() {
-		return (TableQuerySpy) sqlDatabaseFactorySpy.MCR.getReturnValue("factorTableQuery", 0);
+	private TableQuerySpy getFactoredTableQueryUsingCallNumber(int callNumber) {
+		return (TableQuerySpy) sqlDatabaseFactorySpy.MCR.getReturnValue("factorTableQuery",
+				callNumber);
 	}
 
 	private TableFacadeSpy getFirstFactoredTableFacadeSpy() {
@@ -181,8 +183,8 @@ public class DatabaseRecordStorageTest {
 
 		storage.readList("someType", emptyFilterSpy);
 
-		sqlDatabaseFactorySpy.MCR.assertParameters("factorTableQuery", 0, "record_someType");
-		TableQuerySpy tableQuerySpy = getFirstFactoredTableQuery();
+		sqlDatabaseFactorySpy.MCR.assertParameters("factorTableQuery", 0, "record");
+		TableQuerySpy tableQuerySpy = getFactoredTableQueryUsingCallNumber(0);
 
 		TableFacadeSpy tableFacadeSpy = getFirstFactoredTableFacadeSpy();
 		tableFacadeSpy.MCR.assertParameters("readRowsForQuery", 0, tableQuerySpy);
@@ -237,7 +239,7 @@ public class DatabaseRecordStorageTest {
 
 	private void assertGetValueByColumnParameters(RowSpy readRow) {
 		readRow.MCR.assertMethodWasCalled("getValueByColumn");
-		readRow.MCR.assertParameters("getValueByColumn", 0, "record");
+		readRow.MCR.assertParameters("getValueByColumn", 0, "data");
 	}
 
 	private void assertcreateForJsonObjectParameters(int callNumber) {
@@ -258,7 +260,7 @@ public class DatabaseRecordStorageTest {
 		filterSpy.toNo = "10";
 		storage.readList("someType", filterSpy);
 
-		TableQuerySpy tableQuerySpy = getFirstFactoredTableQuery();
+		TableQuerySpy tableQuerySpy = getFactoredTableQueryUsingCallNumber(0);
 
 		tableQuerySpy.MCR.assertParameters("setFromNo", 0, 1L);
 		tableQuerySpy.MCR.assertParameters("setToNo", 0, 10L);
@@ -271,7 +273,7 @@ public class DatabaseRecordStorageTest {
 		filterSpy.toNo = "100";
 		storage.readList("someType", filterSpy);
 
-		TableQuerySpy tableQuerySpy = getFirstFactoredTableQuery();
+		TableQuerySpy tableQuerySpy = getFactoredTableQueryUsingCallNumber(0);
 
 		tableQuerySpy.MCR.assertParameters("setFromNo", 0, 10L);
 		tableQuerySpy.MCR.assertParameters("setToNo", 0, 100L);
@@ -284,7 +286,7 @@ public class DatabaseRecordStorageTest {
 		filterSpy.fromNo = "10";
 		StorageReadResult result = storage.readList("someType", filterSpy);
 
-		TableQuerySpy tableQuerySpy = getFirstFactoredTableQuery();
+		TableQuerySpy tableQuerySpy = getFactoredTableQueryUsingCallNumber(0);
 
 		tableQuerySpy.MCR.assertParameters("setFromNo", 0, 10L);
 		tableQuerySpy.MCR.assertMethodNotCalled("setToNo");
@@ -301,7 +303,7 @@ public class DatabaseRecordStorageTest {
 		filterSpy.toNo = "3";
 		StorageReadResult result = storage.readList("someType", filterSpy);
 
-		TableQuerySpy tableQuerySpy = getFirstFactoredTableQuery();
+		TableQuerySpy tableQuerySpy = getFactoredTableQueryUsingCallNumber(0);
 
 		tableQuerySpy.MCR.assertMethodNotCalled("setFromNo");
 		assertEquals(result.totalNumberOfMatches, 747);
@@ -312,10 +314,13 @@ public class DatabaseRecordStorageTest {
 	@Test
 	public void testGetTotalNumberOfRecordsForTypeTableFacadeFactoredAndCloseCalled()
 			throws Exception {
-		storage.getTotalNumberOfRecordsForType("somType", emptyFilterSpy);
+		storage.getTotalNumberOfRecordsForType("someType", emptyFilterSpy);
 
 		TableFacadeSpy tableFacadeSpy = getFirstFactoredTableFacadeSpy();
 		tableFacadeSpy.MCR.assertMethodWasCalled("close");
+
+		TableQuerySpy tableQuerySpy = getFactoredTableQueryUsingCallNumber(0);
+		tableQuerySpy.MCR.assertParameters("addCondition", 0, "type", someType);
 	}
 
 	@Test
@@ -338,11 +343,10 @@ public class DatabaseRecordStorageTest {
 
 		long count = storage.getTotalNumberOfRecordsForType("someType", emptyFilterSpy);
 
-		TableQuerySpy tableQuerySpy = getFirstFactoredTableQuery();
+		TableQuerySpy tableQuerySpy = getFactoredTableQueryUsingCallNumber(0);
 		TableFacadeSpy tableFacadeSpy = getFirstFactoredTableFacadeSpy();
 
-		sqlDatabaseFactorySpy.MCR.assertParameter("factorTableQuery", 0, "tableName",
-				"record_someType");
+		sqlDatabaseFactorySpy.MCR.assertParameter("factorTableQuery", 0, "tableName", "record");
 
 		tableFacadeSpy.MCR.assertParameters("readNumberOfRows", 0, tableQuerySpy);
 		tableFacadeSpy.MCR.assertReturn("readNumberOfRows", 0, count);
@@ -350,7 +354,9 @@ public class DatabaseRecordStorageTest {
 	}
 
 	@Test
-	public void testCreateTableFacadeFactoredAndCloseCalled() throws Exception {
+
+	public void testCreateTableFacadeFactoredAndTransactionAndCloseCalled() throws Exception {
+		sqlDatabaseFactorySpy.usingTransaction = true;
 		DataGroup dataRecord = new DataGroupSpy();
 		String someDataDivider = "someDataDivider";
 
@@ -358,31 +364,36 @@ public class DatabaseRecordStorageTest {
 				someDataDivider);
 
 		TableFacadeSpy tableFacadeSpy = getFirstFactoredTableFacadeSpy();
+		tableFacadeSpy.MCR.assertMethodWasCalled("startTransaction");
+		tableFacadeSpy.MCR.assertMethodWasCalled("endTransaction");
 		tableFacadeSpy.MCR.assertMethodWasCalled("close");
 	}
 
 	@Test
-	public void testCreateParametersPassedOn() throws Exception {
+
+	public void testCreateParametersPassedOnForRecord() throws Exception {
 		storage.create(someType, someId, dataRecord, emptyStorageTerms, emptyLinkList, dataDivider);
 
 		String dataRecordJson = getConvertedJson(dataRecord);
 
-		sqlDatabaseFactorySpy.MCR.assertParameters("factorTableQuery", 0, "record_someType");
-		TableQuerySpy tableQuerySpy = getFirstFactoredTableQuery();
-		tableQuerySpy.MCR.assertParameters("addParameter", 0, "id", someId);
-		tableQuerySpy.MCR.assertParameters("addParameter", 1, "datadivider", dataDivider);
+		sqlDatabaseFactorySpy.MCR.assertParameters("factorTableQuery", 0, "record");
+		TableQuerySpy tableQuerySpy = getFactoredTableQueryUsingCallNumber(0);
+		tableQuerySpy.MCR.assertParameters("addParameter", 0, "type", someType);
+		tableQuerySpy.MCR.assertParameters("addParameter", 1, "id", someId);
+		tableQuerySpy.MCR.assertParameters("addParameter", 2, "datadivider", dataDivider);
 
 		PGobject jsonObject = new PGobject();
 		jsonObject.setType("json");
 		jsonObject.setValue(dataRecordJson);
 
 		PGobject jsonObject2 = (PGobject) tableQuerySpy.MCR
-				.getValueForMethodNameAndCallNumberAndParameterName("addParameter", 2, "value");
+				.getValueForMethodNameAndCallNumberAndParameterName("addParameter", 3, "value");
 		assertEquals(jsonObject2.getType(), "json");
 		assertEquals(jsonObject2.getValue(), dataRecordJson);
 
 		TableFacadeSpy firstFactoredTableFacadeSpy = getFirstFactoredTableFacadeSpy();
 		firstFactoredTableFacadeSpy.MCR.assertParameters("insertRowUsingQuery", 0, tableQuerySpy);
+		firstFactoredTableFacadeSpy.MCR.assertNumberOfCallsToMethod("insertRowUsingQuery", 1);
 	}
 
 	private String getConvertedJson(DataGroup dataRecord) {
@@ -396,6 +407,84 @@ public class DatabaseRecordStorageTest {
 
 		String dataRecordJson = (String) dataToJsonConeverterSpy.MCR.getReturnValue("toJson", 0);
 		return dataRecordJson;
+	}
+
+	@Test
+	public void testCreateParametersPassedOnForStorageTerm() throws Exception {
+		sqlDatabaseFactorySpy.usingTransaction = true;
+		List<StorageTerm> storageTerms = createStorageTerms();
+
+		storage.create(someType, someId, dataRecord, storageTerms, emptyLinkList, dataDivider);
+
+		sqlDatabaseFactorySpy.MCR.assertNumberOfCallsToMethod("factorTableQuery", 3);
+		sqlDatabaseFactorySpy.MCR.assertParameters("factorTableQuery", 1, "storageterm");
+		sqlDatabaseFactorySpy.MCR.assertParameters("factorTableQuery", 2, "storageterm");
+		TableQuerySpy tableQuery1 = getFactoredTableQueryUsingCallNumber(1);
+		assertStorageTermAsTableQuery(storageTerms.get(0), tableQuery1);
+
+		TableQuerySpy tableQuery2 = getFactoredTableQueryUsingCallNumber(2);
+		assertStorageTermAsTableQuery(storageTerms.get(1), tableQuery2);
+
+		TableFacadeSpy firstFactoredTableFacadeSpy = getFirstFactoredTableFacadeSpy();
+		firstFactoredTableFacadeSpy.MCR.assertNumberOfCallsToMethod("insertRowUsingQuery", 3);
+		firstFactoredTableFacadeSpy.MCR.assertParameters("insertRowUsingQuery", 1, tableQuery1);
+		firstFactoredTableFacadeSpy.MCR.assertParameters("insertRowUsingQuery", 2, tableQuery2);
+	}
+
+	private List<StorageTerm> createStorageTerms() {
+		StorageTerm storageTerm1 = new StorageTerm("someStorageTermId", "someValue",
+				"someStorageKey");
+		StorageTerm storageTerm2 = new StorageTerm("someStorageTermId", "someValue2",
+				"someStorageKey2");
+		List<StorageTerm> storageTerms = List.of(storageTerm1, storageTerm2);
+		return storageTerms;
+	}
+
+	private void assertStorageTermAsTableQuery(StorageTerm storageTerm1,
+			TableQuerySpy tableQuery1) {
+		tableQuery1.MCR.assertParameters("addParameter", 0, "recordtype", someType);
+		tableQuery1.MCR.assertParameters("addParameter", 1, "recordid", someId);
+		tableQuery1.MCR.assertParameters("addParameter", 2, "storagetermid", storageTerm1.id());
+		tableQuery1.MCR.assertParameters("addParameter", 3, "value", storageTerm1.value());
+		tableQuery1.MCR.assertParameters("addParameter", 4, "storagekey",
+				storageTerm1.storageKey());
+	}
+
+	@Test
+	public void testCreateParametersPassedOnForLink() throws Exception {
+		sqlDatabaseFactorySpy.usingTransaction = true;
+		List<Link> links = createLinks();
+
+		storage.create(someType, someId, dataRecord, emptyStorageTerms, links, dataDivider);
+
+		sqlDatabaseFactorySpy.MCR.assertNumberOfCallsToMethod("factorTableQuery", 3);
+		sqlDatabaseFactorySpy.MCR.assertParameters("factorTableQuery", 1, "link");
+		sqlDatabaseFactorySpy.MCR.assertParameters("factorTableQuery", 2, "link");
+		TableQuerySpy tableQuery1 = getFactoredTableQueryUsingCallNumber(1);
+		assertLinkAsTableQuery(links.get(0), tableQuery1);
+		TableQuerySpy tableQuery2 = getFactoredTableQueryUsingCallNumber(2);
+		assertLinkAsTableQuery(links.get(1), tableQuery2);
+
+		TableFacadeSpy firstFactoredTableFacadeSpy = getFirstFactoredTableFacadeSpy();
+		firstFactoredTableFacadeSpy.MCR.assertNumberOfCallsToMethod("insertRowUsingQuery", 3);
+		firstFactoredTableFacadeSpy.MCR.assertParameters("insertRowUsingQuery", 1, tableQuery1);
+		firstFactoredTableFacadeSpy.MCR.assertParameters("insertRowUsingQuery", 2, tableQuery2);
+
+	}
+
+	private List<Link> createLinks() {
+		Link link1 = new Link("toType1", "toId1");
+		Link link2 = new Link("toType2", "toId2");
+
+		List<Link> links = List.of(link1, link2);
+		return links;
+	}
+
+	private void assertLinkAsTableQuery(Link link, TableQuerySpy tableQuery) {
+		tableQuery.MCR.assertParameters("addParameter", 0, "fromtype", someType);
+		tableQuery.MCR.assertParameters("addParameter", 1, "fromid", someId);
+		tableQuery.MCR.assertParameters("addParameter", 2, "totype", link.type());
+		tableQuery.MCR.assertParameters("addParameter", 3, "toid", link.id());
 	}
 
 	@Test
@@ -441,14 +530,15 @@ public class DatabaseRecordStorageTest {
 	}
 
 	@Test
-	public void testUpdateParametersPassedOn() throws Exception {
+	public void testUpdateParametersAssertRecord() throws Exception {
+		sqlDatabaseFactorySpy.usingTransaction = true;
 
 		storage.update(someType, someId, dataRecord, emptyStorageTerms, emptyLinkList, dataDivider);
 
 		String dataRecordJson = getConvertedJson(dataRecord);
 
-		sqlDatabaseFactorySpy.MCR.assertParameters("factorTableQuery", 0, "record_someType");
-		TableQuerySpy tableQuerySpy = getFirstFactoredTableQuery();
+		sqlDatabaseFactorySpy.MCR.assertParameters("factorTableQuery", 2, "record");
+		TableQuerySpy tableQuerySpy = getFactoredTableQueryUsingCallNumber(2);
 		tableQuerySpy.MCR.assertParameters("addParameter", 0, "datadivider", dataDivider);
 		PGobject jsonObject = new PGobject();
 		jsonObject.setType("json");
@@ -459,11 +549,74 @@ public class DatabaseRecordStorageTest {
 		assertEquals(jsonObject2.getType(), "json");
 		assertEquals(jsonObject2.getValue(), dataRecordJson);
 
-		tableQuerySpy.MCR.assertParameters("addCondition", 0, "id", someId);
+		tableQuerySpy.MCR.assertParameters("addCondition", 0, "type", someType);
+		tableQuerySpy.MCR.assertParameters("addCondition", 1, "id", someId);
+
+		TableFacadeSpy tableFacadeSpy = getFirstFactoredTableFacadeSpy();
+		tableFacadeSpy.MCR.assertMethodWasCalled("startTransaction");
+		tableFacadeSpy.MCR.assertMethodWasCalled("endTransaction");
+		tableFacadeSpy.MCR.assertMethodWasCalled("close");
+
+		tableFacadeSpy.MCR.assertParameters("updateRowsUsingQuery", 0, tableQuerySpy);
+		tableFacadeSpy.MCR.assertNumberOfCallsToMethod("deleteRowsForQuery", 2);
+		tableFacadeSpy.MCR.assertNumberOfCallsToMethod("insertRowUsingQuery", 0);
+	}
+
+	@Test
+	public void testUpdateAssertStoragTerm() throws Exception {
+		sqlDatabaseFactorySpy.usingTransaction = true;
+		List<StorageTerm> storageTerms = createStorageTerms();
+
+		storage.update(someType, someId, dataRecord, storageTerms, emptyLinkList, dataDivider);
+
+		sqlDatabaseFactorySpy.MCR.assertParameters("factorTableQuery", 0, "storageterm");
+		TableQuerySpy deleteTableQuerySpy = getFactoredTableQueryUsingCallNumber(0);
+		deleteTableQuerySpy.MCR.assertParameters("addCondition", 0, "recordtype", "someType");
+		deleteTableQuerySpy.MCR.assertParameters("addCondition", 1, "recordid", "someId");
 
 		TableFacadeSpy firstFactoredTableFacadeSpy = getFirstFactoredTableFacadeSpy();
+		firstFactoredTableFacadeSpy.MCR.assertParameters("deleteRowsForQuery", 0,
+				deleteTableQuerySpy);
 
-		firstFactoredTableFacadeSpy.MCR.assertParameters("updateRowsUsingQuery", 0, tableQuerySpy);
+		sqlDatabaseFactorySpy.MCR.assertNumberOfCallsToMethod("factorTableQuery", 5);
+		sqlDatabaseFactorySpy.MCR.assertParameters("factorTableQuery", 2, "storageterm");
+		sqlDatabaseFactorySpy.MCR.assertParameters("factorTableQuery", 3, "storageterm");
+		TableQuerySpy tableQuery1 = getFactoredTableQueryUsingCallNumber(2);
+		assertStorageTermAsTableQuery(storageTerms.get(0), tableQuery1);
+
+		TableQuerySpy tableQuery2 = getFactoredTableQueryUsingCallNumber(3);
+		assertStorageTermAsTableQuery(storageTerms.get(1), tableQuery2);
+
+		firstFactoredTableFacadeSpy.MCR.assertNumberOfCallsToMethod("insertRowUsingQuery", 2);
+		firstFactoredTableFacadeSpy.MCR.assertParameters("insertRowUsingQuery", 0, tableQuery1);
+		firstFactoredTableFacadeSpy.MCR.assertParameters("insertRowUsingQuery", 1, tableQuery2);
+	}
+
+	@Test
+	public void testUpdateAssertLink() throws Exception {
+		sqlDatabaseFactorySpy.usingTransaction = true;
+		List<Link> links = createLinks();
+		storage.update(someType, someId, dataRecord, emptyStorageTerms, links, dataDivider);
+
+		sqlDatabaseFactorySpy.MCR.assertParameters("factorTableQuery", 1, "link");
+		TableQuerySpy tableQuerySpy = getFactoredTableQueryUsingCallNumber(1);
+		tableQuerySpy.MCR.assertParameters("addCondition", 0, "fromtype", "someType");
+		tableQuerySpy.MCR.assertParameters("addCondition", 1, "fromid", "someId");
+
+		TableFacadeSpy firstFactoredTableFacadeSpy = getFirstFactoredTableFacadeSpy();
+		firstFactoredTableFacadeSpy.MCR.assertParameters("deleteRowsForQuery", 1, tableQuerySpy);
+
+		sqlDatabaseFactorySpy.MCR.assertNumberOfCallsToMethod("factorTableQuery", 5);
+		sqlDatabaseFactorySpy.MCR.assertParameters("factorTableQuery", 2, "link");
+		sqlDatabaseFactorySpy.MCR.assertParameters("factorTableQuery", 3, "link");
+		TableQuerySpy tableQuery1 = getFactoredTableQueryUsingCallNumber(2);
+		assertLinkAsTableQuery(links.get(0), tableQuery1);
+		TableQuerySpy tableQuery2 = getFactoredTableQueryUsingCallNumber(3);
+		assertLinkAsTableQuery(links.get(1), tableQuery2);
+
+		firstFactoredTableFacadeSpy.MCR.assertNumberOfCallsToMethod("insertRowUsingQuery", 2);
+		firstFactoredTableFacadeSpy.MCR.assertParameters("insertRowUsingQuery", 0, tableQuery1);
+		firstFactoredTableFacadeSpy.MCR.assertParameters("insertRowUsingQuery", 1, tableQuery2);
 	}
 
 	@Test
@@ -473,8 +626,8 @@ public class DatabaseRecordStorageTest {
 
 		String dataRecordJson = getConvertedJson(dataRecord);
 
-		sqlDatabaseFactorySpy.MCR.assertParameters("factorTableQuery", 0, "record_someType");
-		TableQuerySpy tableQuerySpy = getFirstFactoredTableQuery();
+		sqlDatabaseFactorySpy.MCR.assertParameters("factorTableQuery", 2, "record");
+		TableQuerySpy tableQuerySpy = getFactoredTableQueryUsingCallNumber(2);
 		tableQuerySpy.MCR.assertParameters("addParameter", 0, "datadivider", dataDivider);
 		PGobject jsonObject = new PGobject();
 		jsonObject.setType("json");
@@ -485,7 +638,8 @@ public class DatabaseRecordStorageTest {
 		assertEquals(jsonObject2.getType(), "json");
 		assertEquals(jsonObject2.getValue(), dataRecordJson);
 
-		tableQuerySpy.MCR.assertParameters("addCondition", 0, "id", someId);
+		tableQuerySpy.MCR.assertParameters("addCondition", 0, "type", someType);
+		tableQuerySpy.MCR.assertParameters("addCondition", 1, "id", someId);
 
 		TableFacadeSpy firstFactoredTableFacadeSpy = getFirstFactoredTableFacadeSpy();
 
@@ -525,17 +679,54 @@ public class DatabaseRecordStorageTest {
 	}
 
 	@Test
-	public void testDeleteByTypeAndId() {
+	public void testDeleteAssertRecord() {
+		sqlDatabaseFactorySpy.usingTransaction = true;
+
 		storage.deleteByTypeAndId("someType", "someId");
 
-		sqlDatabaseFactorySpy.MCR.assertParameters("factorTableQuery", 0, "record_someType");
-		TableQuerySpy tableQuerySpy = getFirstFactoredTableQuery();
+		sqlDatabaseFactorySpy.MCR.assertParameters("factorTableQuery", 2, "record");
+		TableQuerySpy tableQuerySpy = getFactoredTableQueryUsingCallNumber(2);
 
-		tableQuerySpy.MCR.assertParameters("addCondition", 0, "id", someId);
+		tableQuerySpy.MCR.assertParameters("addCondition", 0, "type", someType);
+		tableQuerySpy.MCR.assertParameters("addCondition", 1, "id", someId);
+
+		TableFacadeSpy tableFacadeSpy = getFirstFactoredTableFacadeSpy();
+		tableFacadeSpy.MCR.assertMethodWasCalled("startTransaction");
+		tableFacadeSpy.MCR.assertMethodWasCalled("endTransaction");
+		tableFacadeSpy.MCR.assertMethodWasCalled("close");
 
 		TableFacadeSpy firstFactoredTableFacadeSpy = getFirstFactoredTableFacadeSpy();
+		firstFactoredTableFacadeSpy.MCR.assertParameters("deleteRowsForQuery", 2, tableQuerySpy);
+	}
 
+	@Test
+	public void testDeleteAssertStoragTerm() throws Exception {
+		sqlDatabaseFactorySpy.usingTransaction = true;
+
+		storage.deleteByTypeAndId("someType", "someId");
+
+		sqlDatabaseFactorySpy.MCR.assertParameters("factorTableQuery", 0, "storageterm");
+		TableQuerySpy tableQuerySpy = getFactoredTableQueryUsingCallNumber(0);
+		tableQuerySpy.MCR.assertParameters("addCondition", 0, "recordtype", "someType");
+		tableQuerySpy.MCR.assertParameters("addCondition", 1, "recordid", "someId");
+
+		TableFacadeSpy firstFactoredTableFacadeSpy = getFirstFactoredTableFacadeSpy();
 		firstFactoredTableFacadeSpy.MCR.assertParameters("deleteRowsForQuery", 0, tableQuerySpy);
+	}
+
+	@Test
+	public void testDeleteAssertLinks() throws Exception {
+		sqlDatabaseFactorySpy.usingTransaction = true;
+
+		storage.deleteByTypeAndId("someType", "someId");
+
+		sqlDatabaseFactorySpy.MCR.assertParameters("factorTableQuery", 1, "link");
+		TableQuerySpy tableQuerySpy = getFactoredTableQueryUsingCallNumber(1);
+		tableQuerySpy.MCR.assertParameters("addCondition", 0, "fromtype", "someType");
+		tableQuerySpy.MCR.assertParameters("addCondition", 1, "fromid", "someId");
+
+		TableFacadeSpy firstFactoredTableFacadeSpy = getFirstFactoredTableFacadeSpy();
+		firstFactoredTableFacadeSpy.MCR.assertParameters("deleteRowsForQuery", 1, tableQuerySpy);
 	}
 
 	@Test
@@ -633,13 +824,13 @@ public class DatabaseRecordStorageTest {
 		boolean recordExists = storage
 				.recordExistsForAbstractOrImplementingRecordTypeAndRecordId("someType", "someId");
 
-		TableQuerySpy tableQuerySpy = getFirstFactoredTableQuery();
+		TableQuerySpy tableQuerySpy = getFactoredTableQueryUsingCallNumber(0);
 		TableFacadeSpy tableFacadeSpy = getFirstFactoredTableFacadeSpy();
 
-		sqlDatabaseFactorySpy.MCR.assertParameter("factorTableQuery", 0, "tableName",
-				"record_someType");
+		sqlDatabaseFactorySpy.MCR.assertParameter("factorTableQuery", 0, "tableName", "record");
 
-		tableQuerySpy.MCR.assertParameters("addCondition", 0, "id", "someId");
+		tableQuerySpy.MCR.assertParameters("addCondition", 0, "type", "someType");
+		tableQuerySpy.MCR.assertParameters("addCondition", 1, "id", "someId");
 
 		tableFacadeSpy.MCR.assertParameters("readNumberOfRows", 0, tableQuerySpy);
 		assertTrue(recordExists);

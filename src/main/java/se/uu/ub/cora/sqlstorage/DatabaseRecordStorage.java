@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 Uppsala University Library
+ * Copyright 2021, 2022 Uppsala University Library
  *
  * This file is part of Cora.
  *
@@ -58,9 +58,11 @@ import se.uu.ub.cora.storage.StorageReadResult;
  */
 public class DatabaseRecordStorage implements RecordStorage {
 
+	private static final String TYPE_COLUMN = "type";
+	static final String RECORD = "record";
 	private static final String ID_COLUMN = "id";
 	private static final String DATA_DIVIDER_COLUMN = "datadivider";
-	private static final String DATA_RECORD_COLUMN = "record";
+	private static final String RECORD_DATA_COLUMN = "data";
 	private SqlDatabaseFactory sqlDatabaseFactory;
 	private JsonParser jsonParser;
 
@@ -90,17 +92,14 @@ public class DatabaseRecordStorage implements RecordStorage {
 	}
 
 	private TableQuery assembleReadOneQuery(String type, String id) {
-		TableQuery tableQuery = factorTableQueryWithTablePrefixForType(type);
+		TableQuery tableQuery = sqlDatabaseFactory.factorTableQuery(RECORD);
+		tableQuery.addCondition(TYPE_COLUMN, type);
 		tableQuery.addCondition(ID_COLUMN, id);
 		return tableQuery;
 	}
 
-	private TableQuery factorTableQueryWithTablePrefixForType(String type) {
-		return sqlDatabaseFactory.factorTableQuery("record_" + type);
-	}
-
 	private DataGroup convertRowToDataGroup(Row readRow) {
-		String jsonRecord = (String) readRow.getValueByColumn(DATA_RECORD_COLUMN);
+		String jsonRecord = (String) readRow.getValueByColumn(RECORD_DATA_COLUMN);
 		JsonValue jsonValue = jsonParser.parseString(jsonRecord);
 		JsonToDataConverter jsonToDataConverter = JsonToDataConverterProvider
 				.getConverterUsingJsonObject(jsonValue);
@@ -111,9 +110,7 @@ public class DatabaseRecordStorage implements RecordStorage {
 	public void create(String type, String id, DataGroup dataRecord, List<StorageTerm> storageTerms,
 			List<Link> links, String dataDivider) {
 		try (TableFacade tableFacade = sqlDatabaseFactory.factorTableFacade()) {
-			String dataRecordJson = convertDataGroupToJsonString(dataRecord);
-			TableQuery tableQuery = assembleCreateQuery(type, id, dataDivider, dataRecordJson);
-			tableFacade.insertRowUsingQuery(tableQuery);
+			tryToCreate(type, id, dataRecord, storageTerms, links, dataDivider, tableFacade);
 		} catch (SqlConflictException e) {
 			throw RecordConflictException.withMessageAndException(
 					"Record with type: " + type + ", and id: " + id + " already exists in storage.",
@@ -121,6 +118,68 @@ public class DatabaseRecordStorage implements RecordStorage {
 		} catch (Exception e) {
 			throw createStorageExceptionUsingAction(type, id, "creating", e);
 		}
+	}
+
+	private void tryToCreate(String type, String id, DataGroup dataRecord,
+			List<StorageTerm> storageTerms, List<Link> links, String dataDivider,
+			TableFacade tableFacade) throws SQLException {
+		tableFacade.startTransaction();
+		createCreateQueryForRecordAndAddItToTableFacade(type, id, dataRecord, dataDivider,
+				tableFacade);
+		createCreateQueriesForStorageTermsAndAddThemToTableFacade(type, id, storageTerms,
+				tableFacade);
+		createCreateQueriesForLinksAndAddThemToTableFacade(type, id, links, tableFacade);
+		tableFacade.endTransaction();
+	}
+
+	private void createCreateQueryForRecordAndAddItToTableFacade(String type, String id,
+			DataGroup dataRecord, String dataDivider, TableFacade tableFacade) throws SQLException {
+		String dataRecordJson = convertDataGroupToJsonString(dataRecord);
+		TableQuery tableQuery = assembleCreateQuery(type, id, dataDivider, dataRecordJson);
+		tableFacade.insertRowUsingQuery(tableQuery);
+	}
+
+	private void createCreateQueriesForStorageTermsAndAddThemToTableFacade(String type, String id,
+			List<StorageTerm> storageTerms, TableFacade tableFacade) {
+		for (StorageTerm storageTerm : storageTerms) {
+			insertRowForStorageTerm(type, id, tableFacade, storageTerm);
+		}
+	}
+
+	private void insertRowForStorageTerm(String type, String id, TableFacade tableFacade,
+			StorageTerm storageTerm) {
+		TableQuery storageTermsQuery = sqlDatabaseFactory.factorTableQuery("storageterm");
+		addParemetersForStorageTerm(type, id, storageTerm, storageTermsQuery);
+		tableFacade.insertRowUsingQuery(storageTermsQuery);
+	}
+
+	private void addParemetersForStorageTerm(String type, String id, StorageTerm storageTerm,
+			TableQuery storageTermsQuery) {
+		storageTermsQuery.addParameter("recordtype", type);
+		storageTermsQuery.addParameter("recordid", id);
+		storageTermsQuery.addParameter("storagetermid", storageTerm.id());
+		storageTermsQuery.addParameter("value", storageTerm.value());
+		storageTermsQuery.addParameter("storagekey", storageTerm.storageKey());
+	}
+
+	private void createCreateQueriesForLinksAndAddThemToTableFacade(String type, String id,
+			List<Link> links, TableFacade tableFacade) {
+		for (Link link : links) {
+			insertRowForLink(type, id, tableFacade, link);
+		}
+	}
+
+	private void insertRowForLink(String type, String id, TableFacade tableFacade, Link link) {
+		TableQuery linkQuery = sqlDatabaseFactory.factorTableQuery("link");
+		addParemetersForLink(type, id, link, linkQuery);
+		tableFacade.insertRowUsingQuery(linkQuery);
+	}
+
+	private void addParemetersForLink(String type, String id, Link link, TableQuery linkQuery) {
+		linkQuery.addParameter("fromtype", type);
+		linkQuery.addParameter("fromid", id);
+		linkQuery.addParameter("totype", link.type());
+		linkQuery.addParameter("toid", link.id());
 	}
 
 	private StorageException createStorageExceptionUsingAction(String type, String id,
@@ -142,11 +201,12 @@ public class DatabaseRecordStorage implements RecordStorage {
 
 	private TableQuery assembleCreateQuery(String type, String id, String dataDivider,
 			String dataRecord) throws SQLException {
-		TableQuery tableQuery = factorTableQueryWithTablePrefixForType(type);
+		TableQuery tableQuery = sqlDatabaseFactory.factorTableQuery(RECORD);
+		tableQuery.addParameter(TYPE_COLUMN, type);
 		tableQuery.addParameter(ID_COLUMN, id);
 		tableQuery.addParameter(DATA_DIVIDER_COLUMN, dataDivider);
 		PGobject jsonObject = createJsonObject(dataRecord);
-		tableQuery.addParameter(DATA_RECORD_COLUMN, jsonObject);
+		tableQuery.addParameter(RECORD_DATA_COLUMN, jsonObject);
 		return tableQuery;
 	}
 
@@ -154,13 +214,41 @@ public class DatabaseRecordStorage implements RecordStorage {
 	public void deleteByTypeAndId(String type, String id) {
 		int deletedRows = 0;
 		try (TableFacade tableFacade = sqlDatabaseFactory.factorTableFacade()) {
-			TableQuery tableQuery = factorTableQueryWithTablePrefixForType(type);
-			tableQuery.addCondition("id", id);
-			deletedRows = tableFacade.deleteRowsForQuery(tableQuery);
+			tableFacade.startTransaction();
+			createDeleteQueryForStorageTermAndAddItToTableFacade(type, id, tableFacade);
+			createDeleteQueryForLinkAndAddItToTableFacade(type, id, tableFacade);
+			deletedRows = createDeleteQueryForRecordAndAddItToTableFacade(type, id, tableFacade);
+			tableFacade.endTransaction();
 		} catch (Exception e) {
 			throw createStorageExceptionUsingAction(type, id, "deleting", e);
 		}
 		throwRecordNotFoundExceptionIfAffectedRowsIsZero(type, id, deletedRows, "deleting");
+	}
+
+	private void createDeleteQueryForStorageTermAndAddItToTableFacade(String type, String id,
+			TableFacade tableFacade) {
+		TableQuery storageTermQuery = sqlDatabaseFactory.factorTableQuery("storageterm");
+		storageTermQuery.addCondition("recordtype", type);
+		storageTermQuery.addCondition("recordid", id);
+		tableFacade.deleteRowsForQuery(storageTermQuery);
+	}
+
+	private void createDeleteQueryForLinkAndAddItToTableFacade(String type, String id,
+			TableFacade tableFacade) {
+		TableQuery linkQuery = sqlDatabaseFactory.factorTableQuery("link");
+		linkQuery.addCondition("fromtype", type);
+		linkQuery.addCondition("fromid", id);
+		tableFacade.deleteRowsForQuery(linkQuery);
+	}
+
+	private int createDeleteQueryForRecordAndAddItToTableFacade(String type, String id,
+			TableFacade tableFacade) {
+		int deletedRows;
+		TableQuery tableQuery = sqlDatabaseFactory.factorTableQuery(RECORD);
+		tableQuery.addCondition(TYPE_COLUMN, type);
+		tableQuery.addCondition(ID_COLUMN, id);
+		deletedRows = tableFacade.deleteRowsForQuery(tableQuery);
+		return deletedRows;
 	}
 
 	@Override
@@ -173,13 +261,35 @@ public class DatabaseRecordStorage implements RecordStorage {
 			List<Link> links, String dataDivider) {
 		int updatedRows = 0;
 		try (TableFacade tableFacade = sqlDatabaseFactory.factorTableFacade()) {
-			String dataRecordJson = convertDataGroupToJsonString(dataRecord);
-			TableQuery tableQuery = assembleUpdateQuery(type, id, dataDivider, dataRecordJson);
-			updatedRows = tableFacade.updateRowsUsingQuery(tableQuery);
+			updatedRows = tryToUpdate(type, id, dataRecord, storageTerms, links, dataDivider,
+					tableFacade);
 		} catch (Exception e) {
 			throw createStorageExceptionUsingAction(type, id, "updating", e);
 		}
 		throwRecordNotFoundExceptionIfAffectedRowsIsZero(type, id, updatedRows, "updating");
+	}
+
+	private int tryToUpdate(String type, String id, DataGroup dataRecord,
+			List<StorageTerm> storageTerms, List<Link> links, String dataDivider,
+			TableFacade tableFacade) throws SQLException {
+		tableFacade.startTransaction();
+		createDeleteQueryForStorageTermAndAddItToTableFacade(type, id, tableFacade);
+		createDeleteQueryForLinkAndAddItToTableFacade(type, id, tableFacade);
+		createCreateQueriesForStorageTermsAndAddThemToTableFacade(type, id, storageTerms,
+				tableFacade);
+		createCreateQueriesForLinksAndAddThemToTableFacade(type, id, links, tableFacade);
+		int updatedRows = updateRecordData(type, id, dataRecord, dataDivider, tableFacade);
+		tableFacade.endTransaction();
+		return updatedRows;
+	}
+
+	private int updateRecordData(String type, String id, DataGroup dataRecord, String dataDivider,
+			TableFacade tableFacade) throws SQLException {
+		int updatedRows;
+		String dataRecordJson = convertDataGroupToJsonString(dataRecord);
+		TableQuery tableQuery = assembleUpdateQuery(type, id, dataDivider, dataRecordJson);
+		updatedRows = tableFacade.updateRowsUsingQuery(tableQuery);
+		return updatedRows;
 	}
 
 	private void throwRecordNotFoundExceptionIfAffectedRowsIsZero(String type, String id,
@@ -192,11 +302,12 @@ public class DatabaseRecordStorage implements RecordStorage {
 
 	private TableQuery assembleUpdateQuery(String type, String id, String dataDivider,
 			String dataRecord) throws SQLException {
-		TableQuery tableQuery = factorTableQueryWithTablePrefixForType(type);
+		TableQuery tableQuery = sqlDatabaseFactory.factorTableQuery(RECORD);
 		tableQuery.addParameter(DATA_DIVIDER_COLUMN, dataDivider);
 		PGobject jsonObject = createJsonObject(dataRecord);
 
-		tableQuery.addParameter(DATA_RECORD_COLUMN, jsonObject);
+		tableQuery.addParameter(RECORD_DATA_COLUMN, jsonObject);
+		tableQuery.addCondition(TYPE_COLUMN, type);
 		tableQuery.addCondition(ID_COLUMN, id);
 		return tableQuery;
 	}
@@ -251,7 +362,7 @@ public class DatabaseRecordStorage implements RecordStorage {
 	}
 
 	private TableQuery assembleReadRowsQuery(String type, DataGroup filter) {
-		TableQuery tableQuery = factorTableQueryWithTablePrefixForType(type);
+		TableQuery tableQuery = sqlDatabaseFactory.factorTableQuery(RECORD);
 		possiblySetFromNoInQueryFromFilter(tableQuery, filter);
 		possiblySetToNoInQueryFromFilter(tableQuery, filter);
 		tableQuery.addOrderByDesc("id");
@@ -301,8 +412,9 @@ public class DatabaseRecordStorage implements RecordStorage {
 
 	private long readNumberOfRowsFromDatabaseForTypeAndId(String type, String id,
 			TableFacade tableFacade) {
-		TableQuery tableQuery = factorTableQueryWithTablePrefixForType(type);
-		tableQuery.addCondition("id", id);
+		TableQuery tableQuery = sqlDatabaseFactory.factorTableQuery(RECORD);
+		tableQuery.addCondition(TYPE_COLUMN, type);
+		tableQuery.addCondition(ID_COLUMN, id);
 		return tableFacade.readNumberOfRows(tableQuery);
 	}
 
@@ -326,12 +438,9 @@ public class DatabaseRecordStorage implements RecordStorage {
 	}
 
 	private long readFromDatabaseForTypeAndFilter(String type, TableFacade tableFacade) {
-		TableQuery tableQuery = assembleCountQueryForType(type);
+		TableQuery tableQuery = sqlDatabaseFactory.factorTableQuery(RECORD);
+		tableQuery.addCondition(TYPE_COLUMN, type);
 		return tableFacade.readNumberOfRows(tableQuery);
-	}
-
-	private TableQuery assembleCountQueryForType(String type) {
-		return factorTableQueryWithTablePrefixForType(type);
 	}
 
 	@Override
