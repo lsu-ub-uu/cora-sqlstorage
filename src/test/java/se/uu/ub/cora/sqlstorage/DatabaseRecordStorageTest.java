@@ -56,6 +56,8 @@ import se.uu.ub.cora.storage.StorageReadResult;
 
 public class DatabaseRecordStorageTest {
 
+	private static final List<String> LIST_OF_TYPES = List.of("someType1", "someType2");
+	private static final List<String> LIST_WITH_ONE_TYPE = List.of("someType");
 	private DatabaseRecordStorage storage;
 	private SqlDatabaseFactorySpy sqlDatabaseFactorySpy;
 	private JsonParserSpy jsonParserSpy;
@@ -155,7 +157,7 @@ public class DatabaseRecordStorageTest {
 	@Test
 	public void testReadListTableFacadeFactoredAndCloseCalled() throws Exception {
 
-		storage.readList("someType", emptyFilterSpy);
+		storage.readList(LIST_WITH_ONE_TYPE, emptyFilterSpy);
 
 		TableFacadeSpy tableFacadeSpy = getFirstFactoredTableFacadeSpy();
 		tableFacadeSpy.MCR.assertMethodWasCalled("close");
@@ -165,11 +167,12 @@ public class DatabaseRecordStorageTest {
 	public void testReadListTypeNotFound() throws Exception {
 		sqlDatabaseFactorySpy.throwExceptionFromTableFacadeOnRead = true;
 		try {
-			storage.readList("someType", emptyFilterSpy);
+			storage.readList(LIST_OF_TYPES, emptyFilterSpy);
 			makeSureErrorIsThrownFromAboveStatements();
 		} catch (Exception e) {
 			assertTrue(e instanceof RecordNotFoundException);
-			assertEquals(e.getMessage(), "RecordType: someType, not found in storage.");
+			assertEquals(e.getMessage(),
+					"RecordType: [someType1, someType2] not found in storage.");
 			assertEquals(e.getCause().getMessage(), "Error from readRowsForQuery in tablespy");
 		}
 	}
@@ -181,7 +184,7 @@ public class DatabaseRecordStorageTest {
 	@Test
 	public void testReadListTableQueryFactoredAndTableFacadeCalled() throws Exception {
 
-		storage.readList("someType", emptyFilterSpy);
+		storage.readList(LIST_WITH_ONE_TYPE, emptyFilterSpy);
 
 		sqlDatabaseFactorySpy.MCR.assertParameters("factorTableQuery", 0, "record");
 		TableQuerySpy tableQuerySpy = getFactoredTableQueryUsingCallNumber(0);
@@ -195,7 +198,7 @@ public class DatabaseRecordStorageTest {
 	public void testReadListReturnsAStorageReadResult() throws Exception {
 		sqlDatabaseFactorySpy.totalNumberOfRecordsForType = 3;
 
-		StorageReadResult result = storage.readList("someType", emptyFilterSpy);
+		StorageReadResult result = storage.readList(LIST_WITH_ONE_TYPE, emptyFilterSpy);
 
 		assertNotNull(result);
 		assertEquals(result.start, 0);
@@ -205,7 +208,7 @@ public class DatabaseRecordStorageTest {
 
 	@Test
 	public void testRealListRowToDataConvertion() throws Exception {
-		StorageReadResult result = storage.readList("someType", emptyFilterSpy);
+		StorageReadResult result = storage.readList(LIST_WITH_ONE_TYPE, emptyFilterSpy);
 
 		TableFacadeSpy tableFacadeSpy = getFirstFactoredTableFacadeSpy();
 		List<RowSpy> readRows = (List) tableFacadeSpy.MCR.getReturnValue("readRowsForQuery", 0);
@@ -258,7 +261,7 @@ public class DatabaseRecordStorageTest {
 	public void testReadListWithFromNoAndToNoInFilter() throws Exception {
 		filterSpy.fromNo = "1";
 		filterSpy.toNo = "10";
-		storage.readList("someType", filterSpy);
+		storage.readList(LIST_WITH_ONE_TYPE, filterSpy);
 
 		TableQuerySpy tableQuerySpy = getFactoredTableQueryUsingCallNumber(0);
 
@@ -271,7 +274,7 @@ public class DatabaseRecordStorageTest {
 	public void testReadListWithFromNoAndToNoInFilterHigher() throws Exception {
 		filterSpy.fromNo = "10";
 		filterSpy.toNo = "100";
-		storage.readList("someType", filterSpy);
+		storage.readList(LIST_WITH_ONE_TYPE, filterSpy);
 
 		TableQuerySpy tableQuerySpy = getFactoredTableQueryUsingCallNumber(0);
 
@@ -284,7 +287,7 @@ public class DatabaseRecordStorageTest {
 	public void testReadListWithFromNoInFilter() throws Exception {
 		sqlDatabaseFactorySpy.totalNumberOfRecordsForType = 747;
 		filterSpy.fromNo = "10";
-		StorageReadResult result = storage.readList("someType", filterSpy);
+		StorageReadResult result = storage.readList(LIST_WITH_ONE_TYPE, filterSpy);
 
 		TableQuerySpy tableQuerySpy = getFactoredTableQueryUsingCallNumber(0);
 
@@ -301,7 +304,7 @@ public class DatabaseRecordStorageTest {
 	public void testReadListWithToNoInFilter() throws Exception {
 		sqlDatabaseFactorySpy.totalNumberOfRecordsForType = 747;
 		filterSpy.toNo = "3";
-		StorageReadResult result = storage.readList("someType", filterSpy);
+		StorageReadResult result = storage.readList(LIST_WITH_ONE_TYPE, filterSpy);
 
 		TableQuerySpy tableQuerySpy = getFactoredTableQueryUsingCallNumber(0);
 
@@ -314,25 +317,28 @@ public class DatabaseRecordStorageTest {
 	@Test
 	public void testGetTotalNumberOfRecordsForTypeTableFacadeFactoredAndCloseCalled()
 			throws Exception {
-		storage.getTotalNumberOfRecordsForType("someType", emptyFilterSpy);
+		storage.getTotalNumberOfRecordsForType(LIST_OF_TYPES, emptyFilterSpy);
 
 		TableFacadeSpy tableFacadeSpy = getFirstFactoredTableFacadeSpy();
 		tableFacadeSpy.MCR.assertMethodWasCalled("close");
 
-		TableQuerySpy tableQuerySpy = getFactoredTableQueryUsingCallNumber(0);
-		tableQuerySpy.MCR.assertParameters("addCondition", 0, "type", someType);
+		TableQuerySpy tableQuerySpy0 = getFactoredTableQueryUsingCallNumber(0);
+		tableQuerySpy0.MCR.assertParameters("addCondition", 0, "type", "someType1");
+		TableQuerySpy tableQuerySpy1 = getFactoredTableQueryUsingCallNumber(1);
+		tableQuerySpy1.MCR.assertParameters("addCondition", 0, "type", "someType1");
 	}
 
 	@Test
 	public void testGetTotalNumberOfRecordsForTypeNotFound() throws Exception {
 		sqlDatabaseFactorySpy.throwExceptionFromTableFacadeOnRead = true;
 		try {
-			storage.getTotalNumberOfRecordsForType("someType", emptyFilterSpy);
+			storage.getTotalNumberOfRecordsForType(LIST_OF_TYPES, emptyFilterSpy);
 			makeSureErrorIsThrownFromAboveStatements();
 
 		} catch (Exception e) {
 			assertTrue(e instanceof RecordNotFoundException);
-			assertEquals(e.getMessage(), "RecordType: someType, not found in storage.");
+			assertEquals(e.getMessage(),
+					"RecordType: [someType1, someType2] not found in storage.");
 			assertEquals(e.getCause().getMessage(), "Error from readNumberOfRows in tablespy");
 		}
 	}
@@ -341,7 +347,7 @@ public class DatabaseRecordStorageTest {
 	public void testGetTotalNumberOfRecordsForType() throws Exception {
 		sqlDatabaseFactorySpy.totalNumberOfRecordsForType = 747;
 
-		long count = storage.getTotalNumberOfRecordsForType("someType", emptyFilterSpy);
+		long count = storage.getTotalNumberOfRecordsForType(LIST_WITH_ONE_TYPE, emptyFilterSpy);
 
 		TableQuerySpy tableQuerySpy = getFactoredTableQueryUsingCallNumber(0);
 		TableFacadeSpy tableFacadeSpy = getFirstFactoredTableFacadeSpy();
@@ -774,12 +780,6 @@ public class DatabaseRecordStorageTest {
 	}
 
 	@Test(expectedExceptions = NotImplementedException.class, expectedExceptionsMessageRegExp = ""
-			+ "readAbstractList is not implemented")
-	public void testAbstractList() {
-		storage.readAbstractList("someType", new DataGroupSpy());
-	}
-
-	@Test(expectedExceptions = NotImplementedException.class, expectedExceptionsMessageRegExp = ""
 			+ "generateLinkCollectionPointingToRecord is not implemented")
 	public void testGenerateLinkCollectionPointingToRecord() {
 		storage.generateLinkCollectionPointingToRecord("someType", "someId");
@@ -788,14 +788,14 @@ public class DatabaseRecordStorageTest {
 	@Test
 	public void testRecordExists_notFound0() {
 		sqlDatabaseFactorySpy.totalNumberOfRecordsForType = 0;
-		assertFalse(storage.recordExistsForAbstractOrImplementingRecordTypeAndRecordId("someType",
-				"someId"));
+		assertFalse(storage.recordExistsForListOfImplementingRecordTypesAndRecordId(
+				LIST_WITH_ONE_TYPE, "someId"));
 	}
 
 	@Test
 	public void testRecordExists_TableFacadeFactoredAndCloseCalled() throws Exception {
-		assertFalse(storage.recordExistsForAbstractOrImplementingRecordTypeAndRecordId("someType",
-				"someId"));
+		assertFalse(storage.recordExistsForListOfImplementingRecordTypesAndRecordId(
+				LIST_WITH_ONE_TYPE, "someId"));
 
 		TableFacadeSpy tableFacadeSpy = getFirstFactoredTableFacadeSpy();
 		tableFacadeSpy.MCR.assertMethodWasCalled("close");
@@ -805,14 +805,14 @@ public class DatabaseRecordStorageTest {
 	public void testRecordExists_NotFound() throws Exception {
 		sqlDatabaseFactorySpy.throwExceptionFromTableFacadeOnRead = true;
 		try {
-			assertFalse(storage.recordExistsForAbstractOrImplementingRecordTypeAndRecordId(
-					"someType", "someId"));
+			assertFalse(storage.recordExistsForListOfImplementingRecordTypesAndRecordId(
+					LIST_OF_TYPES, "someId"));
 			makeSureErrorIsThrownFromAboveStatements();
 
 		} catch (Exception e) {
 			assertTrue(e instanceof RecordNotFoundException);
 			assertEquals(e.getMessage(),
-					"RecordType: someType, with id: someId, not found in storage.");
+					"RecordType: [someType1, someType2] with id: someId, not found in storage.");
 			assertEquals(e.getCause().getMessage(), "Error from readNumberOfRows in tablespy");
 		}
 	}
@@ -821,8 +821,8 @@ public class DatabaseRecordStorageTest {
 	public void testRecordExists() throws Exception {
 		sqlDatabaseFactorySpy.totalNumberOfRecordsForType = 1;
 
-		boolean recordExists = storage
-				.recordExistsForAbstractOrImplementingRecordTypeAndRecordId("someType", "someId");
+		boolean recordExists = storage.recordExistsForListOfImplementingRecordTypesAndRecordId(
+				LIST_WITH_ONE_TYPE, "someId");
 
 		TableQuerySpy tableQuerySpy = getFactoredTableQueryUsingCallNumber(0);
 		TableFacadeSpy tableFacadeSpy = getFirstFactoredTableFacadeSpy();
@@ -839,15 +839,7 @@ public class DatabaseRecordStorageTest {
 	@Test
 	public void testRecordExists_Found747() {
 		sqlDatabaseFactorySpy.totalNumberOfRecordsForType = 747;
-		assertTrue(storage.recordExistsForAbstractOrImplementingRecordTypeAndRecordId("someType",
+		assertTrue(storage.recordExistsForListOfImplementingRecordTypesAndRecordId(LIST_OF_TYPES,
 				"someId"));
 	}
-
-	@Test(expectedExceptions = NotImplementedException.class, expectedExceptionsMessageRegExp = ""
-			+ "getTotalNumberOfRecordsForAbstractType is not implemented")
-	public void testGetTotalNumberOfRecordsForAbstractType() {
-		storage.getTotalNumberOfRecordsForAbstractType("someAbstractType", Collections.emptyList(),
-				new DataGroupSpy());
-	}
-
 }
