@@ -317,22 +317,20 @@ public class DatabaseRecordStorageTest {
 	@Test
 	public void testGetTotalNumberOfRecordsForTypeTableFacadeFactoredAndCloseCalled()
 			throws Exception {
-		storage.getTotalNumberOfRecordsForType(LIST_OF_TYPES, emptyFilterSpy);
+		storage.getTotalNumberOfRecordsForTypes(LIST_OF_TYPES, emptyFilterSpy);
 
 		TableFacadeSpy tableFacadeSpy = getFirstFactoredTableFacadeSpy();
 		tableFacadeSpy.MCR.assertMethodWasCalled("close");
 
 		TableQuerySpy tableQuerySpy0 = getFactoredTableQueryUsingCallNumber(0);
-		tableQuerySpy0.MCR.assertParameters("addCondition", 0, "type", "someType1");
-		TableQuerySpy tableQuerySpy1 = getFactoredTableQueryUsingCallNumber(1);
-		tableQuerySpy1.MCR.assertParameters("addCondition", 0, "type", "someType1");
+		tableQuerySpy0.MCR.assertParameters("addCondition", 0, "type", LIST_OF_TYPES);
 	}
 
 	@Test
 	public void testGetTotalNumberOfRecordsForTypeNotFound() throws Exception {
 		sqlDatabaseFactorySpy.throwExceptionFromTableFacadeOnRead = true;
 		try {
-			storage.getTotalNumberOfRecordsForType(LIST_OF_TYPES, emptyFilterSpy);
+			storage.getTotalNumberOfRecordsForTypes(LIST_OF_TYPES, emptyFilterSpy);
 			makeSureErrorIsThrownFromAboveStatements();
 
 		} catch (Exception e) {
@@ -347,7 +345,7 @@ public class DatabaseRecordStorageTest {
 	public void testGetTotalNumberOfRecordsForType() throws Exception {
 		sqlDatabaseFactorySpy.totalNumberOfRecordsForType = 747;
 
-		long count = storage.getTotalNumberOfRecordsForType(LIST_WITH_ONE_TYPE, emptyFilterSpy);
+		long count = storage.getTotalNumberOfRecordsForTypes(LIST_WITH_ONE_TYPE, emptyFilterSpy);
 
 		TableQuerySpy tableQuerySpy = getFactoredTableQueryUsingCallNumber(0);
 		TableFacadeSpy tableFacadeSpy = getFirstFactoredTableFacadeSpy();

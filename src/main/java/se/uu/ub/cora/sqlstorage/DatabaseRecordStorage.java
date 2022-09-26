@@ -340,7 +340,7 @@ public class DatabaseRecordStorage implements RecordStorage {
 	private StorageReadResult readAndConvertDataList(List<String> types, TableFacade tableFacade,
 			DataGroup filter) {
 		List<Row> readRows = readRowsFromDatabase(types, tableFacade, filter);
-		long totalNumberOfMatches = readFromDatabaseForTypeAndFilter(types, tableFacade);
+		long totalNumberOfMatches = readNumberOfRows(types, tableFacade);
 		StorageReadResult readResult = convertRowsToListOfDataGroups(readRows);
 		readResult.totalNumberOfMatches = totalNumberOfMatches;
 		return readResult;
@@ -430,22 +430,17 @@ public class DatabaseRecordStorage implements RecordStorage {
 	}
 
 	@Override
-	public long getTotalNumberOfRecordsForType(List<String> types, DataGroup filter) {
+	public long getTotalNumberOfRecordsForTypes(List<String> types, DataGroup filter) {
 		try (TableFacade tableFacade = sqlDatabaseFactory.factorTableFacade()) {
-			int numOfRecords = 0;
-			for (String type : types) {
-				// TODO: Vi har inte stöd för IN i databasesql
-				numOfRecords += readFromDatabaseForTypeAndFilter(type, tableFacade);
-			}
-			return numOfRecords;
+			return readNumberOfRows(types, tableFacade);
 		} catch (SqlDatabaseException e) {
 			throw createRecordNotFoundExceptionForType(types, e);
 		}
 	}
 
-	private long readFromDatabaseForTypeAndFilter(String type, TableFacade tableFacade) {
+	private long readNumberOfRows(List<String> types, TableFacade tableFacade) {
 		TableQuery tableQuery = sqlDatabaseFactory.factorTableQuery(RECORD);
-		tableQuery.addCondition(TYPE_COLUMN, type);
+		tableQuery.addCondition(TYPE_COLUMN, types);
 		return tableFacade.readNumberOfRows(tableQuery);
 	}
 
