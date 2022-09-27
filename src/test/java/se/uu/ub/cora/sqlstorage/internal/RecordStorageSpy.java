@@ -19,7 +19,7 @@ public class RecordStorageSpy extends DatabaseRecordStorage {
 	}
 
 	@Override
-	public DataGroup read(String type, String id) {
+	public DataGroup read(List<String> types, String id) {
 		// TODO Auto-generated method stub
 		return null;
 	}

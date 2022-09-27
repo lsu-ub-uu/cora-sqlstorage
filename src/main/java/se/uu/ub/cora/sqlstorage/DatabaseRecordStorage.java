@@ -75,12 +75,12 @@ public class DatabaseRecordStorage implements RecordStorage {
 	}
 
 	@Override
-	public DataGroup read(String type, String id) {
+	public DataGroup read(List<String> types, String id) {
 		try (TableFacade tableFacade = sqlDatabaseFactory.factorTableFacade()) {
-			return readAndConvertData(type, id, tableFacade);
+			return readAndConvertData(types, id, tableFacade);
 		} catch (SqlDatabaseException e) {
 			throw new RecordNotFoundException(
-					"No record found for recordType: " + type + " with id: " + id, e);
+					"No record found for recordType: " + types + " with id: " + id, e);
 		}
 	}
 
