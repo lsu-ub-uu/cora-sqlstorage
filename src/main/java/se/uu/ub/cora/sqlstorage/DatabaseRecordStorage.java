@@ -84,19 +84,19 @@ public class DatabaseRecordStorage implements RecordStorage {
 		}
 	}
 
-	private DataGroup readAndConvertData(String type, String id, TableFacade tableFacade) {
-		Row readRow = readFromDatabase(type, id, tableFacade);
+	private DataGroup readAndConvertData(List<String> types, String id, TableFacade tableFacade) {
+		Row readRow = readFromDatabase(types, id, tableFacade);
 		return convertRowToDataGroup(readRow);
 	}
 
-	private Row readFromDatabase(String type, String id, TableFacade tableFacade) {
-		TableQuery tableQuery = assembleReadOneQuery(type, id);
+	private Row readFromDatabase(List<String> types, String id, TableFacade tableFacade) {
+		TableQuery tableQuery = assembleReadOneQuery(types, id);
 		return tableFacade.readOneRowForQuery(tableQuery);
 	}
 
-	private TableQuery assembleReadOneQuery(String type, String id) {
+	private TableQuery assembleReadOneQuery(List<String> types, String id) {
 		TableQuery tableQuery = sqlDatabaseFactory.factorTableQuery(RECORD);
-		tableQuery.addCondition(TYPE_COLUMN, type);
+		tableQuery.addCondition(TYPE_COLUMN, types);
 		tableQuery.addCondition(ID_COLUMN, id);
 		return tableQuery;
 	}

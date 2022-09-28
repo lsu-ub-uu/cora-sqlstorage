@@ -97,19 +97,20 @@ public class DatabaseRecordStorageTest {
 
 	@Test
 	public void testReadTableFacadeFactoredAndCloseCalled() throws Exception {
-		storage.read("someType", "someId");
+		storage.read(List.of("someType", "someOtherType"), "someId");
 		TableFacadeSpy tableFacadeSpy = getFirstFactoredTableFacadeSpy();
 		tableFacadeSpy.MCR.assertMethodWasCalled("close");
 	}
 
 	@Test
 	public void testReadParametersAddedToTableQueryAndPassedOn() throws Exception {
-		storage.read("someType", "someId");
+		List<String> types = List.of("someType", "someOtherType");
+		storage.read(types, "someId");
 
 		sqlDatabaseFactorySpy.MCR.assertParameters("factorTableQuery", 0, "record");
 		TableQuerySpy tableQuerySpy = getFactoredTableQueryUsingCallNumber(0);
 
-		tableQuerySpy.MCR.assertParameters("addCondition", 0, "type", "someType");
+		tableQuerySpy.MCR.assertParameters("addCondition", 0, "type", types);
 		tableQuerySpy.MCR.assertParameters("addCondition", 1, "id", "someId");
 
 		TableFacadeSpy tableFacadeSpy = getFirstFactoredTableFacadeSpy();
@@ -129,34 +130,29 @@ public class DatabaseRecordStorageTest {
 	public void testReadTypeNotFound() throws Exception {
 		sqlDatabaseFactorySpy.throwExceptionFromTableFacadeOnRead = true;
 		try {
-			storage.read("someType", "someId");
+			storage.read(List.of("someType", "someOtherType"), "someId");
 			makeSureErrorIsThrownFromAboveStatements();
 
 		} catch (Exception e) {
 			assertTrue(e instanceof RecordNotFoundException);
 			assertEquals(e.getMessage(),
-					"No record found for recordType: someType with id: someId");
+					"No record found for recordType: [someType, someOtherType] with id: someId");
 			assertEquals(e.getCause().getMessage(), "Error from readOneRowForQuery in tablespy");
 		}
 	}
 
 	@Test
 	public void testReadOkReadJsonConvertedToDataGroup() throws Exception {
-		String recordType = "someRecordType";
-		String id = "someId";
-
-		DataGroup readValueFromStorage = storage.read(recordType, id);
+		DataGroup readValueFromStorage = storage.read(List.of("someType", "someOtherType"),
+				"someId");
 
 		TableFacadeSpy tableFacadeSpy = getFirstFactoredTableFacadeSpy();
-
 		RowSpy readRow = (RowSpy) tableFacadeSpy.MCR.getReturnValue("readOneRowForQuery", 0);
-
 		assertRowToDataGroupConvertion(0, readRow, readValueFromStorage);
 	}
 
 	@Test
 	public void testReadListTableFacadeFactoredAndCloseCalled() throws Exception {
-
 		storage.readList(LIST_WITH_ONE_TYPE, emptyFilterSpy);
 
 		TableFacadeSpy tableFacadeSpy = getFirstFactoredTableFacadeSpy();
@@ -183,7 +179,6 @@ public class DatabaseRecordStorageTest {
 
 	@Test
 	public void testReadListTableQueryFactoredAndTableFacadeCalled() throws Exception {
-
 		storage.readList(LIST_WITH_ONE_TYPE, emptyFilterSpy);
 
 		sqlDatabaseFactorySpy.MCR.assertParameters("factorTableQuery", 0, "record");
@@ -211,7 +206,7 @@ public class DatabaseRecordStorageTest {
 		StorageReadResult result = storage.readList(LIST_WITH_ONE_TYPE, emptyFilterSpy);
 
 		TableFacadeSpy tableFacadeSpy = getFirstFactoredTableFacadeSpy();
-		List<RowSpy> readRows = (List) tableFacadeSpy.MCR.getReturnValue("readRowsForQuery", 0);
+		List<?> readRows = (List<?>) tableFacadeSpy.MCR.getReturnValue("readRowsForQuery", 0);
 
 		for (int i = 0; i < readRows.size(); i++) {
 			assertRowToDataGroupConvertionForOneRow(result, readRows, i);
@@ -219,9 +214,9 @@ public class DatabaseRecordStorageTest {
 
 	}
 
-	private void assertRowToDataGroupConvertionForOneRow(StorageReadResult result,
-			List<RowSpy> readRows, int i) {
-		RowSpy readRow = readRows.get(i);
+	private void assertRowToDataGroupConvertionForOneRow(StorageReadResult result, List<?> readRows,
+			int i) {
+		RowSpy readRow = (RowSpy) readRows.get(i);
 		DataGroup readValueFromStorage = result.listOfDataGroups.get(i);
 
 		assertRowToDataGroupConvertion(i, readRow, readValueFromStorage);
