@@ -19,6 +19,7 @@
 package se.uu.ub.cora.sqlstorage;
 
 import java.sql.SQLException;
+import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -65,6 +66,8 @@ public class DatabaseRecordStorage implements RecordStorage {
 	private static final String RECORD_DATA_COLUMN = "data";
 	private SqlDatabaseFactory sqlDatabaseFactory;
 	private JsonParser jsonParser;
+	private static final String ERRMSG_TYPES_NOT_FOUND = "RecordType: {0} not found in storage.";
+	private static final String ERRMSG_TYPES_AND_ID_NOT_FOUND = "RecordType: {0} with id: {1}, not found in storage.";
 
 	public DatabaseRecordStorage(SqlDatabaseFactory sqlDatabaseFactory, JsonParser jsonParser) {
 		this.sqlDatabaseFactory = sqlDatabaseFactory;
@@ -72,28 +75,28 @@ public class DatabaseRecordStorage implements RecordStorage {
 	}
 
 	@Override
-	public DataGroup read(String type, String id) {
+	public DataGroup read(List<String> types, String id) {
 		try (TableFacade tableFacade = sqlDatabaseFactory.factorTableFacade()) {
-			return readAndConvertData(type, id, tableFacade);
+			return readAndConvertData(types, id, tableFacade);
 		} catch (SqlDatabaseException e) {
 			throw new RecordNotFoundException(
-					"No record found for recordType: " + type + " with id: " + id, e);
+					"No record found for recordType: " + types + " with id: " + id, e);
 		}
 	}
 
-	private DataGroup readAndConvertData(String type, String id, TableFacade tableFacade) {
-		Row readRow = readFromDatabase(type, id, tableFacade);
+	private DataGroup readAndConvertData(List<String> types, String id, TableFacade tableFacade) {
+		Row readRow = readFromDatabase(types, id, tableFacade);
 		return convertRowToDataGroup(readRow);
 	}
 
-	private Row readFromDatabase(String type, String id, TableFacade tableFacade) {
-		TableQuery tableQuery = assembleReadOneQuery(type, id);
+	private Row readFromDatabase(List<String> types, String id, TableFacade tableFacade) {
+		TableQuery tableQuery = assembleReadOneQuery(types, id);
 		return tableFacade.readOneRowForQuery(tableQuery);
 	}
 
-	private TableQuery assembleReadOneQuery(String type, String id) {
+	private TableQuery assembleReadOneQuery(List<String> types, String id) {
 		TableQuery tableQuery = sqlDatabaseFactory.factorTableQuery(RECORD);
-		tableQuery.addCondition(TYPE_COLUMN, type);
+		tableQuery.addCondition(TYPE_COLUMN, types);
 		tableQuery.addCondition(ID_COLUMN, id);
 		return tableQuery;
 	}
@@ -320,30 +323,32 @@ public class DatabaseRecordStorage implements RecordStorage {
 	}
 
 	@Override
-	public StorageReadResult readList(String type, DataGroup filter) {
+	public StorageReadResult readList(List<String> types, DataGroup filter) {
 		try (TableFacade tableFacade = sqlDatabaseFactory.factorTableFacade()) {
-			return readAndConvertDataList(type, tableFacade, filter);
+			return readAndConvertDataList(types, tableFacade, filter);
 		} catch (SqlDatabaseException e) {
-			throw createRecordNotFoundExceptionForType(type, e);
+			throw createRecordNotFoundExceptionForType(types, e);
 		}
 	}
 
-	private RecordNotFoundException createRecordNotFoundExceptionForType(String type,
+	private RecordNotFoundException createRecordNotFoundExceptionForType(List<String> types,
 			SqlDatabaseException e) {
-		return new RecordNotFoundException("RecordType: " + type + ", not found in storage.", e);
+		String errMsg = MessageFormat.format(ERRMSG_TYPES_NOT_FOUND, types);
+		return new RecordNotFoundException(errMsg, e);
 	}
 
-	private StorageReadResult readAndConvertDataList(String type, TableFacade tableFacade,
+	private StorageReadResult readAndConvertDataList(List<String> types, TableFacade tableFacade,
 			DataGroup filter) {
-		List<Row> readRows = readRowsFromDatabase(type, tableFacade, filter);
-		long totalNumberOfMatches = readNumberForType(type, tableFacade);
+		List<Row> readRows = readRowsFromDatabase(types, tableFacade, filter);
+		long totalNumberOfMatches = readNumberOfRows(types, tableFacade);
 		StorageReadResult readResult = convertRowsToListOfDataGroups(readRows);
 		readResult.totalNumberOfMatches = totalNumberOfMatches;
 		return readResult;
 	}
 
-	private List<Row> readRowsFromDatabase(String type, TableFacade tableFacade, DataGroup filter) {
-		TableQuery tableQuery = assembleReadRowsQuery(type, filter);
+	private List<Row> readRowsFromDatabase(List<String> types, TableFacade tableFacade,
+			DataGroup filter) {
+		TableQuery tableQuery = assembleReadRowsQuery(types, filter);
 		return tableFacade.readRowsForQuery(tableQuery);
 	}
 
@@ -361,7 +366,7 @@ public class DatabaseRecordStorage implements RecordStorage {
 		}
 	}
 
-	private TableQuery assembleReadRowsQuery(String type, DataGroup filter) {
+	private TableQuery assembleReadRowsQuery(List<String> types, DataGroup filter) {
 		TableQuery tableQuery = sqlDatabaseFactory.factorTableQuery(RECORD);
 		possiblySetFromNoInQueryFromFilter(tableQuery, filter);
 		possiblySetToNoInQueryFromFilter(tableQuery, filter);
@@ -384,30 +389,30 @@ public class DatabaseRecordStorage implements RecordStorage {
 	}
 
 	@Override
-	public StorageReadResult readAbstractList(String type, DataGroup filter) {
-		throw NotImplementedException.withMessage("readAbstractList is not implemented");
-	}
-
-	@Override
 	public Collection<DataGroup> generateLinkCollectionPointingToRecord(String type, String id) {
 		throw NotImplementedException
 				.withMessage("generateLinkCollectionPointingToRecord is not implemented");
 	}
 
 	@Override
-	public boolean recordExistsForAbstractOrImplementingRecordTypeAndRecordId(String type,
+	public boolean recordExistsForListOfImplementingRecordTypesAndRecordId(List<String> types,
 			String id) {
 		try (TableFacade tableFacade = sqlDatabaseFactory.factorTableFacade()) {
-			return tryToCheckIfRecordExistsForTypeAndId(type, id, tableFacade);
+			return tryToCheckIfRecordExistsForTypeAndId(types, id, tableFacade);
 		} catch (SqlDatabaseException e) {
-			throw createRecordNotFoundExceptionForExists(type, id, e);
+			throw createRecordNotFoundExceptionForExists(types, id, e);
 		}
 	}
 
-	private boolean tryToCheckIfRecordExistsForTypeAndId(String type, String id,
+	private boolean tryToCheckIfRecordExistsForTypeAndId(List<String> types, String id,
 			TableFacade tableFacade) {
-		long numberOfRows = readNumberOfRowsFromDatabaseForTypeAndId(type, id, tableFacade);
-		return numberOfRows > 0;
+		for (String type : types) {
+			long numberOfRows = readNumberOfRowsFromDatabaseForTypeAndId(type, id, tableFacade);
+			if (numberOfRows > 0) {
+				return true;
+			}
+		}
+		return false;
 	}
 
 	private long readNumberOfRowsFromDatabaseForTypeAndId(String type, String id,
@@ -418,36 +423,25 @@ public class DatabaseRecordStorage implements RecordStorage {
 		return tableFacade.readNumberOfRows(tableQuery);
 	}
 
-	private RecordNotFoundException createRecordNotFoundExceptionForExists(String type, String id,
-			SqlDatabaseException e) {
-		String errorString = "RecordType: %s, with id: %s, not found in storage.";
-		return new RecordNotFoundException(String.format(errorString, type, id), e);
+	private RecordNotFoundException createRecordNotFoundExceptionForExists(List<String> type,
+			String id, SqlDatabaseException e) {
+		return new RecordNotFoundException(
+				MessageFormat.format(ERRMSG_TYPES_AND_ID_NOT_FOUND, type, id), e);
 	}
 
 	@Override
-	public long getTotalNumberOfRecordsForType(String type, DataGroup filter) {
+	public long getTotalNumberOfRecordsForTypes(List<String> types, DataGroup filter) {
 		try (TableFacade tableFacade = sqlDatabaseFactory.factorTableFacade()) {
-			return readNumberForType(type, tableFacade);
+			return readNumberOfRows(types, tableFacade);
 		} catch (SqlDatabaseException e) {
-			throw createRecordNotFoundExceptionForType(type, e);
+			throw createRecordNotFoundExceptionForType(types, e);
 		}
 	}
 
-	private long readNumberForType(String type, TableFacade tableFacade) {
-		return readFromDatabaseForTypeAndFilter(type, tableFacade);
-	}
-
-	private long readFromDatabaseForTypeAndFilter(String type, TableFacade tableFacade) {
+	private long readNumberOfRows(List<String> types, TableFacade tableFacade) {
 		TableQuery tableQuery = sqlDatabaseFactory.factorTableQuery(RECORD);
-		tableQuery.addCondition(TYPE_COLUMN, type);
+		tableQuery.addCondition(TYPE_COLUMN, types);
 		return tableFacade.readNumberOfRows(tableQuery);
-	}
-
-	@Override
-	public long getTotalNumberOfRecordsForAbstractType(String abstractType,
-			List<String> implementingTypes, DataGroup filter) {
-		throw NotImplementedException
-				.withMessage("getTotalNumberOfRecordsForAbstractType is not implemented");
 	}
 
 	public SqlDatabaseFactory onlyForTestGetSqlDatabaseFactory() {
