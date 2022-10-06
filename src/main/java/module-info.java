@@ -18,5 +18,5 @@ module se.uu.ub.cora.sqlstorage {
 	// loader.
 	// exports se.uu.ub.cora.sqlstorage;
 
-	provides se.uu.ub.cora.storage.RecordStorageProvider with DatabaseStorageProvider;
+	provides se.uu.ub.cora.storage.RecordStorageFactory with DatabaseStorageProvider;
 }

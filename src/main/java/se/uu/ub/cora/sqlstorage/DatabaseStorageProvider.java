@@ -27,10 +27,10 @@ import se.uu.ub.cora.logger.LoggerProvider;
 import se.uu.ub.cora.sqldatabase.SqlDatabaseFactory;
 import se.uu.ub.cora.sqldatabase.SqlDatabaseFactoryImp;
 import se.uu.ub.cora.sqlstorage.internal.DatabaseStorageInstance;
-import se.uu.ub.cora.storage.RecordStorageProvider;
+import se.uu.ub.cora.storage.RecordStorageFactory;
 import se.uu.ub.cora.storage.StorageException;
 
-public class DatabaseStorageProvider implements RecordStorageProvider {
+public class DatabaseStorageProvider implements RecordStorageFactory {
 
 	private Logger log = LoggerProvider.getLoggerForClass(DatabaseStorageProvider.class);
 	private static final String LOOKUP_NAME = "coraDatabaseLookupName";
