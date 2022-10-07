@@ -27,10 +27,10 @@ import se.uu.ub.cora.logger.LoggerProvider;
 import se.uu.ub.cora.sqldatabase.SqlDatabaseFactory;
 import se.uu.ub.cora.sqldatabase.SqlDatabaseFactoryImp;
 import se.uu.ub.cora.sqlstorage.internal.DatabaseStorageInstance;
-import se.uu.ub.cora.storage.RecordStorageFactory;
+import se.uu.ub.cora.storage.RecordStorageInstanceProvider;
 import se.uu.ub.cora.storage.StorageException;
 
-public class DatabaseStorageProvider implements RecordStorageFactory {
+public class DatabaseStorageProvider implements RecordStorageInstanceProvider {
 
 	private Logger log = LoggerProvider.getLoggerForClass(DatabaseStorageProvider.class);
 	private static final String LOOKUP_NAME = "coraDatabaseLookupName";
@@ -39,10 +39,27 @@ public class DatabaseStorageProvider implements RecordStorageFactory {
 
 	@Override
 	public int getOrderToSelectImplementionsBy() {
-		return 0;
+		return 10;
 	}
 
 	@Override
+	public DatabaseRecordStorage getRecordStorage() {
+		// throwErrorIfStorageNotStarted();
+		return DatabaseStorageInstance.getInstance();
+	}
+
+	private void throwErrorIfStorageNotStarted() {
+		if (storageNotStarted()) {
+			throw StorageException.withMessage(
+					"DatabaseStorageProvider not started, please call startUsingInitInfo first.");
+		}
+	}
+
+	static void setStaticInstance(DatabaseRecordStorage recordStorage) {
+		DatabaseStorageInstance.setInstance(recordStorage);
+	}
+
+	// @Override
 	public synchronized void startUsingInitInfo(Map<String, String> initInfo) {
 		this.initInfo = initInfo;
 		possiblyStartStorage();
@@ -99,23 +116,6 @@ public class DatabaseStorageProvider implements RecordStorageFactory {
 
 	private void logDatabaseStorageAlreadyStarted() {
 		log.logInfoUsingMessage("DatabaseRecordStorage already started, using that instance.");
-	}
-
-	@Override
-	public DatabaseRecordStorage getRecordStorage() {
-		throwErrorIfStorageNotStarted();
-		return DatabaseStorageInstance.getInstance();
-	}
-
-	private void throwErrorIfStorageNotStarted() {
-		if (storageNotStarted()) {
-			throw StorageException.withMessage(
-					"DatabaseStorageProvider not started, please call startUsingInitInfo first.");
-		}
-	}
-
-	static void setStaticInstance(DatabaseRecordStorage recordStorage) {
-		DatabaseStorageInstance.setInstance(recordStorage);
 	}
 
 }

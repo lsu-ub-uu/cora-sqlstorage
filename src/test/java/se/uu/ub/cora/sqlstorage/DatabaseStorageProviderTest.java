@@ -66,14 +66,13 @@ public class DatabaseStorageProviderTest {
 	}
 
 	@Test
-	public void testGetOrderToSelectImplementationsByIsOne() {
-		provider.startUsingInitInfo(initInfo);
-		assertEquals(provider.getOrderToSelectImplementionsBy(), 0);
+	public void testGetOrderToSelectImplementationsByIsTen() {
+		assertEquals(provider.getOrderToSelectImplementionsBy(), 10);
 	}
 
 	@Test
 	public void testNormalStartupReturnsDatabaseRecordStorage() {
-		provider.startUsingInitInfo(initInfo);
+		// provider.startUsingInitInfo(initInfo);
 		RecordStorage recordStorage = provider.getRecordStorage();
 		assertTrue(recordStorage instanceof DatabaseRecordStorage);
 	}

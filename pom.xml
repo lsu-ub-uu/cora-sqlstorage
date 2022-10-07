@@ -36,6 +36,7 @@
 
 	<properties>
 		<storage.version>7.0-SNAPSHOT</storage.version>
+		<initialize.version>1.0-SNAPSHOT</initialize.version>
 		<data.version>7.2-SNAPSHOT</data.version>
 		<json.version>3.3.0</json.version>
 		<sqldatabase.version>6.5.0</sqldatabase.version>
@@ -56,6 +57,12 @@
 			<groupId>se.uu.ub.cora</groupId>
 			<artifactId>storage</artifactId>
 			<version>${storage.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>se.uu.ub.cora</groupId>
+			<artifactId>initialize</artifactId>
+			<version>${initialize.version}</version>
+			<scope>provided</scope>
 		</dependency>
 		<dependency>
 			<groupId>se.uu.ub.cora</groupId>
