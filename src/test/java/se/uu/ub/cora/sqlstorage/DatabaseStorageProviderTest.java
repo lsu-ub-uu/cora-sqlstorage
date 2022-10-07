@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 Uppsala University Library
+ * Copyright 2021, 2022 Uppsala University Library
  *
  * This file is part of Cora.
  *
@@ -31,6 +31,8 @@ import java.util.Map;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
+import se.uu.ub.cora.initialize.InitializationException;
+import se.uu.ub.cora.initialize.SettingsProvider;
 import se.uu.ub.cora.json.parser.JsonParser;
 import se.uu.ub.cora.json.parser.org.OrgJsonParser;
 import se.uu.ub.cora.logger.LoggerProvider;
@@ -38,7 +40,6 @@ import se.uu.ub.cora.sqldatabase.SqlDatabaseFactoryImp;
 import se.uu.ub.cora.sqlstorage.internal.DatabaseStorageInstance;
 import se.uu.ub.cora.sqlstorage.spy.log.LoggerFactorySpy;
 import se.uu.ub.cora.storage.RecordStorage;
-import se.uu.ub.cora.storage.StorageException;
 
 public class DatabaseStorageProviderTest {
 	private Map<String, String> initInfo = new HashMap<>();
@@ -49,10 +50,10 @@ public class DatabaseStorageProviderTest {
 
 	@BeforeMethod
 	public void beforeMethod() {
+		DatabaseStorageInstance.setInstance(null);
 		setUpFactories();
 		setUpDefaultInitInfo();
 		provider = new DatabaseStorageProvider();
-		DatabaseStorageInstance.setInstance(null);
 	}
 
 	private void setUpFactories() {
@@ -63,6 +64,7 @@ public class DatabaseStorageProviderTest {
 	private void setUpDefaultInitInfo() {
 		initInfo = new HashMap<>();
 		initInfo.put("coraDatabaseLookupName", "java:/comp/env/jdbc/coraPostgres");
+		SettingsProvider.setSettings(initInfo);
 	}
 
 	@Test
@@ -72,14 +74,13 @@ public class DatabaseStorageProviderTest {
 
 	@Test
 	public void testNormalStartupReturnsDatabaseRecordStorage() {
-		// provider.startUsingInitInfo(initInfo);
 		RecordStorage recordStorage = provider.getRecordStorage();
+
 		assertTrue(recordStorage instanceof DatabaseRecordStorage);
 	}
 
 	@Test
 	public void testDatabaseRecordStorageStartedWithSqlDatabaseFactory() throws Exception {
-		provider.startUsingInitInfo(initInfo);
 		DatabaseRecordStorage recordStorage = provider.getRecordStorage();
 		SqlDatabaseFactoryImp sqlDatabaseFactory = (SqlDatabaseFactoryImp) recordStorage
 				.onlyForTestGetSqlDatabaseFactory();
@@ -90,7 +91,6 @@ public class DatabaseStorageProviderTest {
 
 	@Test
 	public void testDatabaseRecordStorageStartedWithJsonParser() throws Exception {
-		provider.startUsingInitInfo(initInfo);
 		DatabaseRecordStorage recordStorage = provider.getRecordStorage();
 		JsonParser jsonParser = recordStorage.onlyForTestGetJsonParser();
 		assertTrue(jsonParser instanceof OrgJsonParser);
@@ -98,7 +98,8 @@ public class DatabaseStorageProviderTest {
 
 	@Test
 	public void testLoggingNormalStartup() {
-		provider.startUsingInitInfo(initInfo);
+		provider.getRecordStorage();
+
 		assertEquals(loggerFactorySpy.getInfoLogMessageUsingClassNameAndNo(testedClassName, 0),
 				"DatabaseStorageProvider starting DatabaseRecordStorage...");
 		assertEquals(loggerFactorySpy.getInfoLogMessageUsingClassNameAndNo(testedClassName, 1),
@@ -107,28 +108,28 @@ public class DatabaseStorageProviderTest {
 				"DatabaseStorageProvider started DatabaseRecordStorage");
 	}
 
-	@Test(expectedExceptions = StorageException.class, expectedExceptionsMessageRegExp = ""
-			+ "InitInfo must contain coraDatabaseLookupName")
-	public void testErrorMissingLookupNameInInitInfo() throws Exception {
-		provider.startUsingInitInfo(emptyInitInfo);
+	@Test(expectedExceptions = InitializationException.class)
+	public void testErrorMissingLookupNameInInitInfo() {
+		SettingsProvider.setSettings(null);
+		provider.getRecordStorage();
 	}
 
 	@Test
 	public void testLoggingMissingLookupNameInInitInfo() throws Exception {
 		try {
-			provider.startUsingInitInfo(emptyInitInfo);
+			SettingsProvider.setSettings(emptyInitInfo);
+			provider.getRecordStorage();
 			assertTrue(false);
 		} catch (Exception e) {
 		}
 		assertEquals(loggerFactorySpy.getInfoLogMessageUsingClassNameAndNo(testedClassName, 0),
 				"DatabaseStorageProvider starting DatabaseRecordStorage...");
-		assertEquals(loggerFactorySpy.getFatalLogMessageUsingClassNameAndNo(testedClassName, 0),
-				"InitInfo must contain coraDatabaseLookupName");
+		System.out.println(loggerFactorySpy.createdLoggers.toString());
+
 	}
 
 	@Test
 	public void testOnlyOneInstance() throws Exception {
-		provider.startUsingInitInfo(initInfo);
 		DatabaseRecordStorage recordStorage = provider.getRecordStorage();
 		DatabaseRecordStorage recordStorage2 = provider.getRecordStorage();
 		assertSame(recordStorage2, recordStorage);
@@ -136,35 +137,17 @@ public class DatabaseStorageProviderTest {
 
 	@Test
 	public void testThreadsWhenCreatingConnectionProvider() throws Exception {
-		Class<?>[] methodParameters = { Map.class };
+		Class<?>[] methodParameters = {};
 		Method declaredMethod = DatabaseStorageProvider.class
-				.getDeclaredMethod("startUsingInitInfo", methodParameters);
+				.getDeclaredMethod("possiblyStartStorage", methodParameters);
 		assertTrue(Modifier.isSynchronized(declaredMethod.getModifiers()));
-	}
-
-	@Test(expectedExceptions = StorageException.class, expectedExceptionsMessageRegExp = ""
-			+ "DatabaseStorageProvider not started, please call startUsingInitInfo first.")
-	public void testNotStarted() throws Exception {
-		provider.getRecordStorage();
 	}
 
 	@Test
 	public void testOneStaticInstance() throws Exception {
-		provider.startUsingInitInfo(initInfo);
 		DatabaseRecordStorage recordStorage = provider.getRecordStorage();
 		provider = new DatabaseStorageProvider();
 		DatabaseRecordStorage recordStorage2 = provider.getRecordStorage();
 		assertSame(recordStorage2, recordStorage);
 	}
-
-	@Test
-	public void testLogWhenAlreadyStarted() throws Exception {
-		provider.startUsingInitInfo(initInfo);
-		provider = new DatabaseStorageProvider();
-		provider.startUsingInitInfo(initInfo);
-
-		assertEquals(loggerFactorySpy.getInfoLogMessageUsingClassNameAndNo(testedClassName, 0),
-				"DatabaseRecordStorage already started, using that instance.");
-	}
-
 }
