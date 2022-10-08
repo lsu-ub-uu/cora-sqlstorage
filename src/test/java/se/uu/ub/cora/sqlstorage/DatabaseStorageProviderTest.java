@@ -36,24 +36,23 @@ import se.uu.ub.cora.initialize.SettingsProvider;
 import se.uu.ub.cora.json.parser.JsonParser;
 import se.uu.ub.cora.json.parser.org.OrgJsonParser;
 import se.uu.ub.cora.logger.LoggerProvider;
+import se.uu.ub.cora.logger.spies.LoggerFactorySpy;
+import se.uu.ub.cora.logger.spies.LoggerSpy;
 import se.uu.ub.cora.sqldatabase.SqlDatabaseFactoryImp;
 import se.uu.ub.cora.sqlstorage.internal.DatabaseStorageInstance;
-import se.uu.ub.cora.sqlstorage.spy.log.LoggerFactorySpy;
 import se.uu.ub.cora.storage.RecordStorage;
 
 public class DatabaseStorageProviderTest {
 	private Map<String, String> initInfo = new HashMap<>();
-	private Map<String, String> emptyInitInfo = new HashMap<>();
 	private LoggerFactorySpy loggerFactorySpy;
-	private String testedClassName = "DatabaseStorageProvider";
-	private DatabaseStorageProvider provider;
+	private DatabaseStorageInstanceProvider provider;
 
 	@BeforeMethod
 	public void beforeMethod() {
-		DatabaseStorageInstance.setInstance(null);
 		setUpFactories();
+		DatabaseStorageInstance.setInstance(null);
 		setUpDefaultInitInfo();
-		provider = new DatabaseStorageProvider();
+		provider = new DatabaseStorageInstanceProvider();
 	}
 
 	private void setUpFactories() {
@@ -100,32 +99,24 @@ public class DatabaseStorageProviderTest {
 	public void testLoggingNormalStartup() {
 		provider.getRecordStorage();
 
-		assertEquals(loggerFactorySpy.getInfoLogMessageUsingClassNameAndNo(testedClassName, 0),
-				"DatabaseStorageProvider starting DatabaseRecordStorage...");
-		assertEquals(loggerFactorySpy.getInfoLogMessageUsingClassNameAndNo(testedClassName, 1),
-				"Found java:/comp/env/jdbc/coraPostgres as coraDatabaseLookupName");
-		assertEquals(loggerFactorySpy.getInfoLogMessageUsingClassNameAndNo(testedClassName, 2),
-				"DatabaseStorageProvider started DatabaseRecordStorage");
+		LoggerSpy logger = getLoggerSpy();
+		logger.MCR.assertParameters("logInfoUsingMessage", 0,
+				"DatabaseStorageInstanceProvider starting DatabaseRecordStorage...");
+		logger.MCR.assertParameters("logInfoUsingMessage", 1,
+				"DatabaseStorageInstanceProvider started DatabaseRecordStorage");
+	}
+
+	private LoggerSpy getLoggerSpy() {
+		loggerFactorySpy.MCR.assertParameters("factorForClass", 0,
+				DatabaseStorageInstanceProvider.class);
+		LoggerSpy logger = (LoggerSpy) loggerFactorySpy.MCR.getReturnValue("factorForClass", 0);
+		return logger;
 	}
 
 	@Test(expectedExceptions = InitializationException.class)
-	public void testErrorMissingLookupNameInInitInfo() {
+	public void testErrorMissingNoInitInfo() {
 		SettingsProvider.setSettings(null);
 		provider.getRecordStorage();
-	}
-
-	@Test
-	public void testLoggingMissingLookupNameInInitInfo() throws Exception {
-		try {
-			SettingsProvider.setSettings(emptyInitInfo);
-			provider.getRecordStorage();
-			assertTrue(false);
-		} catch (Exception e) {
-		}
-		assertEquals(loggerFactorySpy.getInfoLogMessageUsingClassNameAndNo(testedClassName, 0),
-				"DatabaseStorageProvider starting DatabaseRecordStorage...");
-		System.out.println(loggerFactorySpy.createdLoggers.toString());
-
 	}
 
 	@Test
@@ -138,7 +129,7 @@ public class DatabaseStorageProviderTest {
 	@Test
 	public void testThreadsWhenCreatingConnectionProvider() throws Exception {
 		Class<?>[] methodParameters = {};
-		Method declaredMethod = DatabaseStorageProvider.class
+		Method declaredMethod = DatabaseStorageInstanceProvider.class
 				.getDeclaredMethod("possiblyStartStorage", methodParameters);
 		assertTrue(Modifier.isSynchronized(declaredMethod.getModifiers()));
 	}
@@ -146,7 +137,7 @@ public class DatabaseStorageProviderTest {
 	@Test
 	public void testOneStaticInstance() throws Exception {
 		DatabaseRecordStorage recordStorage = provider.getRecordStorage();
-		provider = new DatabaseStorageProvider();
+		provider = new DatabaseStorageInstanceProvider();
 		DatabaseRecordStorage recordStorage2 = provider.getRecordStorage();
 		assertSame(recordStorage2, recordStorage);
 	}

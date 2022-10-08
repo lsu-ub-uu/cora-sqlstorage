@@ -28,9 +28,9 @@ import se.uu.ub.cora.sqldatabase.SqlDatabaseFactoryImp;
 import se.uu.ub.cora.sqlstorage.internal.DatabaseStorageInstance;
 import se.uu.ub.cora.storage.RecordStorageInstanceProvider;
 
-public class DatabaseStorageProvider implements RecordStorageInstanceProvider {
+public class DatabaseStorageInstanceProvider implements RecordStorageInstanceProvider {
 
-	private Logger log = LoggerProvider.getLoggerForClass(DatabaseStorageProvider.class);
+	private Logger log = LoggerProvider.getLoggerForClass(DatabaseStorageInstanceProvider.class);
 	private static final String LOOKUP_NAME = "coraDatabaseLookupName";
 	private String databaseLookupValue;
 
@@ -60,20 +60,15 @@ public class DatabaseStorageProvider implements RecordStorageInstanceProvider {
 	}
 
 	private void logAndStartStorage() {
-		log.logInfoUsingMessage("DatabaseStorageProvider starting DatabaseRecordStorage...");
+		log.logInfoUsingMessage(
+				"DatabaseStorageInstanceProvider starting DatabaseRecordStorage...");
 		startStorage();
-		log.logInfoUsingMessage("DatabaseStorageProvider started DatabaseRecordStorage");
+		log.logInfoUsingMessage("DatabaseStorageInstanceProvider started DatabaseRecordStorage");
 	}
 
 	private void startStorage() {
-		databaseLookupValue = tryToGetInitParameterLogIfFoundThrowErrorIfNot(LOOKUP_NAME);
+		databaseLookupValue = SettingsProvider.getSetting(LOOKUP_NAME);
 		createDependenciesAndStartStorage();
-	}
-
-	private String tryToGetInitParameterLogIfFoundThrowErrorIfNot(String parameterName) {
-		String parameterValue = SettingsProvider.getSetting(parameterName);
-		log.logInfoUsingMessage("Found " + parameterValue + " as " + parameterName);
-		return parameterValue;
 	}
 
 	private void createDependenciesAndStartStorage() {

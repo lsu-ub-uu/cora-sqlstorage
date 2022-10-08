@@ -41,6 +41,7 @@
 		<json.version>3.3.0</json.version>
 		<sqldatabase.version>6.5.0</sqldatabase.version>
 		<logger.version>2.5.0</logger.version>
+		<loggerspies.version>1.0-SNAPSHOT</loggerspies.version>
 		<testutils.version>1.5.0</testutils.version>
 	</properties>
 
@@ -84,6 +85,12 @@
 			<artifactId>logger</artifactId>
 			<version>${logger.version}</version>
 			<scope>provided</scope>
+		</dependency>
+		<dependency>
+			<groupId>se.uu.ub.cora</groupId>
+			<artifactId>logger-spies</artifactId>
+			<version>${loggerspies.version}</version>
+			<scope>test</scope>
 		</dependency>
 		<dependency>
 			<groupId>org.testng</groupId>
