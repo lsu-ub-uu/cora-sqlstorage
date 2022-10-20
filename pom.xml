@@ -35,14 +35,14 @@
 	<url>http://maven.apache.org</url>
 
 	<properties>
-		<storage.version>7.0-SNAPSHOT</storage.version>
-		<initialize.version>1.0-SNAPSHOT</initialize.version>
-		<data.version>7.2-SNAPSHOT</data.version>
-		<json.version>3.3.0</json.version>
-		<sqldatabase.version>6.5.0</sqldatabase.version>
+		<storage.version>7.0.0</storage.version>
+		<initialize.version>1.0.0</initialize.version>
+		<data.version>7.2.0</data.version>
+		<json.version>3.4.0</json.version>
+		<sqldatabase.version>6.6.0</sqldatabase.version>
 		<logger.version>2.5.0</logger.version>
-		<loggerspies.version>1.0-SNAPSHOT</loggerspies.version>
-		<testutils.version>1.5.0</testutils.version>
+		<loggerspies.version>1.0.0</loggerspies.version>
+		<testutils.version>1.6.0</testutils.version>
 	</properties>
 
 	<scm>
