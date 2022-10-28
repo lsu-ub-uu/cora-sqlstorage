@@ -70,13 +70,15 @@ public class TableFacadeSpy implements TableFacade {
 		if (throwExceptionOnRead) {
 			throw SqlDatabaseException.withMessage("Error from readRowsForQuery in tablespy");
 		}
-		RowSpy result = new RowSpy();
-		RowSpy result2 = new RowSpy();
-		RowSpy result3 = new RowSpy();
 		List<Row> listResult = new ArrayList<>();
-		listResult.add(result);
-		listResult.add(result2);
-		listResult.add(result3);
+		if (totalNumberOfRecordsForType > 0) {
+			RowSpy result = new RowSpy();
+			RowSpy result2 = new RowSpy();
+			RowSpy result3 = new RowSpy();
+			listResult.add(result);
+			listResult.add(result2);
+			listResult.add(result3);
+		}
 
 		MCR.addReturned(listResult);
 		return listResult;

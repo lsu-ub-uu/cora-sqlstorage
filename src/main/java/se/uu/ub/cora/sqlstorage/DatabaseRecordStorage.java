@@ -59,8 +59,9 @@ import se.uu.ub.cora.storage.StorageReadResult;
  */
 public class DatabaseRecordStorage implements RecordStorage {
 
+	private static final String TABLE_LINK = "link";
 	private static final String TYPE_COLUMN = "type";
-	static final String RECORD = "record";
+	static final String TABLE_RECORD = "record";
 	private static final String ID_COLUMN = "id";
 	private static final String DATA_DIVIDER_COLUMN = "datadivider";
 	private static final String RECORD_DATA_COLUMN = "data";
@@ -78,6 +79,7 @@ public class DatabaseRecordStorage implements RecordStorage {
 	public DataGroup read(List<String> types, String id) {
 		try (TableFacade tableFacade = sqlDatabaseFactory.factorTableFacade()) {
 			return readAndConvertData(types, id, tableFacade);
+			// TODO: handle storageException if other errors
 		} catch (SqlDatabaseException e) {
 			throw new RecordNotFoundException(
 					"No record found for recordType: " + types + " with id: " + id, e);
@@ -95,7 +97,7 @@ public class DatabaseRecordStorage implements RecordStorage {
 	}
 
 	private TableQuery assembleReadOneQuery(List<String> types, String id) {
-		TableQuery tableQuery = sqlDatabaseFactory.factorTableQuery(RECORD);
+		TableQuery tableQuery = sqlDatabaseFactory.factorTableQuery(TABLE_RECORD);
 		tableQuery.addCondition(TYPE_COLUMN, types);
 		tableQuery.addCondition(ID_COLUMN, id);
 		return tableQuery;
@@ -173,7 +175,7 @@ public class DatabaseRecordStorage implements RecordStorage {
 	}
 
 	private void insertRowForLink(String type, String id, TableFacade tableFacade, Link link) {
-		TableQuery linkQuery = sqlDatabaseFactory.factorTableQuery("link");
+		TableQuery linkQuery = sqlDatabaseFactory.factorTableQuery(TABLE_LINK);
 		addParemetersForLink(type, id, link, linkQuery);
 		tableFacade.insertRowUsingQuery(linkQuery);
 	}
@@ -204,7 +206,7 @@ public class DatabaseRecordStorage implements RecordStorage {
 
 	private TableQuery assembleCreateQuery(String type, String id, String dataDivider,
 			String dataRecord) throws SQLException {
-		TableQuery tableQuery = sqlDatabaseFactory.factorTableQuery(RECORD);
+		TableQuery tableQuery = sqlDatabaseFactory.factorTableQuery(TABLE_RECORD);
 		tableQuery.addParameter(TYPE_COLUMN, type);
 		tableQuery.addParameter(ID_COLUMN, id);
 		tableQuery.addParameter(DATA_DIVIDER_COLUMN, dataDivider);
@@ -238,7 +240,7 @@ public class DatabaseRecordStorage implements RecordStorage {
 
 	private void createDeleteQueryForLinkAndAddItToTableFacade(String type, String id,
 			TableFacade tableFacade) {
-		TableQuery linkQuery = sqlDatabaseFactory.factorTableQuery("link");
+		TableQuery linkQuery = sqlDatabaseFactory.factorTableQuery(TABLE_LINK);
 		linkQuery.addCondition("fromtype", type);
 		linkQuery.addCondition("fromid", id);
 		tableFacade.deleteRowsForQuery(linkQuery);
@@ -247,16 +249,11 @@ public class DatabaseRecordStorage implements RecordStorage {
 	private int createDeleteQueryForRecordAndAddItToTableFacade(String type, String id,
 			TableFacade tableFacade) {
 		int deletedRows;
-		TableQuery tableQuery = sqlDatabaseFactory.factorTableQuery(RECORD);
+		TableQuery tableQuery = sqlDatabaseFactory.factorTableQuery(TABLE_RECORD);
 		tableQuery.addCondition(TYPE_COLUMN, type);
 		tableQuery.addCondition(ID_COLUMN, id);
 		deletedRows = tableFacade.deleteRowsForQuery(tableQuery);
 		return deletedRows;
-	}
-
-	@Override
-	public boolean linksExistForRecord(String type, String id) {
-		throw NotImplementedException.withMessage("linksExistForRecord is not implemented");
 	}
 
 	@Override
@@ -305,7 +302,7 @@ public class DatabaseRecordStorage implements RecordStorage {
 
 	private TableQuery assembleUpdateQuery(String type, String id, String dataDivider,
 			String dataRecord) throws SQLException {
-		TableQuery tableQuery = sqlDatabaseFactory.factorTableQuery(RECORD);
+		TableQuery tableQuery = sqlDatabaseFactory.factorTableQuery(TABLE_RECORD);
 		tableQuery.addParameter(DATA_DIVIDER_COLUMN, dataDivider);
 		PGobject jsonObject = createJsonObject(dataRecord);
 
@@ -367,7 +364,7 @@ public class DatabaseRecordStorage implements RecordStorage {
 	}
 
 	private TableQuery assembleReadRowsQuery(List<String> types, DataGroup filter) {
-		TableQuery tableQuery = sqlDatabaseFactory.factorTableQuery(RECORD);
+		TableQuery tableQuery = sqlDatabaseFactory.factorTableQuery(TABLE_RECORD);
 		possiblySetFromNoInQueryFromFilter(tableQuery, filter);
 		possiblySetToNoInQueryFromFilter(tableQuery, filter);
 		tableQuery.addOrderByDesc("id");
@@ -389,9 +386,46 @@ public class DatabaseRecordStorage implements RecordStorage {
 	}
 
 	@Override
-	public Collection<DataGroup> generateLinkCollectionPointingToRecord(String type, String id) {
-		throw NotImplementedException
-				.withMessage("generateLinkCollectionPointingToRecord is not implemented");
+	public boolean linksExistForRecord(String type, String id) {
+		throw NotImplementedException.withMessage("linksExistForRecord is not implemented");
+		// TableQuery tableQuery = sqlDatabaseFactory.factorTableQuery(TABLE_RECORD);
+//		tableQuery.addCondition("totype", type);
+//		tableQuery.addCondition("toid", id);
+		// return tableFacade.readNumberOfRows(tableQuery);
+	}
+
+	@Override
+	public Collection<Link> getLinksToRecord(String type, String id) {
+		try (TableFacade tableFacade = sqlDatabaseFactory.factorTableFacade()) {
+			return tryToGetLinksToRecord(type, id, tableFacade);
+		} catch (Exception e) {
+			throw StorageException.withMessageAndException(
+					"Could not get links for type: someType and id: someId.", e);
+		}
+	}
+
+	private Collection<Link> tryToGetLinksToRecord(String type, String id,
+			TableFacade tableFacade) {
+		List<Row> readRowsForQuery = findLinksInStorage(tableFacade, type, id);
+		return transformRowsToLinks(readRowsForQuery);
+	}
+
+	private List<Row> findLinksInStorage(TableFacade tableFacade, String type, String id) {
+		TableQuery tableQuery = sqlDatabaseFactory.factorTableQuery(TABLE_LINK);
+		tableQuery.addCondition("totype", type);
+		tableQuery.addCondition("toid", id);
+		return tableFacade.readRowsForQuery(tableQuery);
+	}
+
+	private Collection<Link> transformRowsToLinks(List<Row> readRowsForQuery) {
+		List<Link> result = new ArrayList<>();
+		for (Row row : readRowsForQuery) {
+			String linkType = (String) row.getValueByColumn("fromtype");
+			String linkId = (String) row.getValueByColumn("fromid");
+			Link link = new Link(linkType, linkId);
+			result.add(link);
+		}
+		return result;
 	}
 
 	@Override
@@ -417,7 +451,7 @@ public class DatabaseRecordStorage implements RecordStorage {
 
 	private long readNumberOfRowsFromDatabaseForTypeAndId(String type, String id,
 			TableFacade tableFacade) {
-		TableQuery tableQuery = sqlDatabaseFactory.factorTableQuery(RECORD);
+		TableQuery tableQuery = sqlDatabaseFactory.factorTableQuery(TABLE_RECORD);
 		tableQuery.addCondition(TYPE_COLUMN, type);
 		tableQuery.addCondition(ID_COLUMN, id);
 		return tableFacade.readNumberOfRows(tableQuery);
@@ -439,7 +473,7 @@ public class DatabaseRecordStorage implements RecordStorage {
 	}
 
 	private long readNumberOfRows(List<String> types, TableFacade tableFacade) {
-		TableQuery tableQuery = sqlDatabaseFactory.factorTableQuery(RECORD);
+		TableQuery tableQuery = sqlDatabaseFactory.factorTableQuery(TABLE_RECORD);
 		tableQuery.addCondition(TYPE_COLUMN, types);
 		return tableFacade.readNumberOfRows(tableQuery);
 	}

@@ -24,6 +24,7 @@ import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertTrue;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 
@@ -369,7 +370,6 @@ public class DatabaseRecordStorageTest {
 	}
 
 	@Test
-
 	public void testCreateParametersPassedOnForRecord() throws Exception {
 		storage.create(someType, someId, dataRecord, emptyStorageTerms, emptyLinkList, dataDivider);
 
@@ -772,10 +772,66 @@ public class DatabaseRecordStorageTest {
 		storage.linksExistForRecord("someType", "someId");
 	}
 
-	@Test(expectedExceptions = NotImplementedException.class, expectedExceptionsMessageRegExp = ""
-			+ "generateLinkCollectionPointingToRecord is not implemented")
-	public void testGenerateLinkCollectionPointingToRecord() {
-		storage.generateLinkCollectionPointingToRecord("someType", "someId");
+	@Test
+	public void testGetLinksToRecordNoLinksFound() {
+		sqlDatabaseFactorySpy.totalNumberOfRecordsForType = 0;
+
+		Collection<Link> links = storage.getLinksToRecord("someType", "someId");
+
+		assertEquals(links.size(), 0);
+	}
+
+	@Test
+	public void testGetLinksToRecordWithLinks() {
+		sqlDatabaseFactorySpy.totalNumberOfRecordsForType = 3;
+
+		List<Link> links = (List<Link>) storage.getLinksToRecord(someType, someId);
+
+		sqlDatabaseFactorySpy.MCR.assertParameters("factorTableQuery", 0, "link");
+		TableQuerySpy tableQuerySpy = getFactoredTableQueryUsingCallNumber(0);
+		tableQuerySpy.MCR.assertParameters("addCondition", 0, "totype", someType);
+		tableQuerySpy.MCR.assertParameters("addCondition", 1, "toid", someId);
+
+		TableFacadeSpy tableFacadeSpy = getFirstFactoredTableFacadeSpy();
+		tableFacadeSpy.MCR.assertParameters("readRowsForQuery", 0, tableQuerySpy);
+
+		List<RowSpy> rows = (List<RowSpy>) tableFacadeSpy.MCR.getReturnValue("readRowsForQuery", 0);
+		assertRows(rows, 0, links.get(0).type(), links.get(0).id());
+		assertRows(rows, 1, links.get(1).type(), links.get(1).id());
+		assertRows(rows, 2, links.get(2).type(), links.get(2).id());
+
+		assertEquals(links.size(), 3);
+	}
+
+	private void assertRows(List<RowSpy> rows, int rowNumber, String linkFromType,
+			String linkFromId) {
+		rows.get(rowNumber).MCR.assertParameters("getValueByColumn", 0, "fromtype");
+		rows.get(rowNumber).MCR.assertParameters("getValueByColumn", 1, "fromid");
+
+		rows.get(rowNumber).MCR.assertReturn("getValueByColumn", 0, linkFromType);
+		rows.get(rowNumber).MCR.assertReturn("getValueByColumn", 1, linkFromId);
+	}
+
+	@Test
+	public void testGetLinksToRecordClosed() throws Exception {
+		storage.getLinksToRecord("someType", "someId");
+		TableFacadeSpy tableFacadeSpy = getFirstFactoredTableFacadeSpy();
+		tableFacadeSpy.MCR.assertMethodWasCalled("close");
+	}
+
+	@Test
+	public void testGetLinksToRecordUpdated() throws Exception {
+		sqlDatabaseFactorySpy.throwExceptionFromTableFacadeOnRead = true;
+
+		try {
+			storage.getLinksToRecord("someType", "someId");
+			makeSureErrorIsThrownFromAboveStatements();
+
+		} catch (Exception e) {
+			assertTrue(e instanceof StorageException);
+			assertEquals(e.getMessage(), "Could not get links for type: someType and id: someId.");
+			assertTrue(e.getCause() instanceof Exception);
+		}
 	}
 
 	@Test
