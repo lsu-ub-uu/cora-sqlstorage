@@ -152,10 +152,10 @@ public class DatabaseRecordStorageTest {
 
 		} catch (Exception e) {
 			assertTrue(e instanceof StorageException);
-			assertEquals(e.getMessage(),
-					"No record found for recordType(s): [someType, someOtherType], with id: someId.");
+			assertEquals(e.getMessage(), "Read did not generate a single result for recordType(s): "
+					+ "[someType, someOtherType], with id: someId.");
 			assertEquals(e.getCause().getMessage(),
-					"Not found error from readOneRowForQuery in tablespy");
+					"Data error from readOneRowForQuery in tablespy");
 		}
 	}
 
@@ -422,12 +422,12 @@ public class DatabaseRecordStorageTest {
 	}
 
 	private String getConvertedJson(DataGroup dataRecord) {
-		DataToJsonConverterFactorySpy dataToJsonConverterFactorySpy = (DataToJsonConverterFactorySpy) dataToJsonConverterFactoryCreatorSpy.MCR
+		DataToJsonConverterFactorySpy converterFactorySpy = (DataToJsonConverterFactorySpy) dataToJsonConverterFactoryCreatorSpy.MCR
 				.getReturnValue("createFactory", 0);
 
-		dataToJsonConverterFactorySpy.MCR.assertParameters("factorUsingConvertible", 0, dataRecord);
+		converterFactorySpy.MCR.assertParameters("factorUsingConvertible", 0, dataRecord);
 
-		DataToJsonConverterSpy dataToJsonConeverterSpy = (DataToJsonConverterSpy) dataToJsonConverterFactorySpy.MCR
+		DataToJsonConverterSpy dataToJsonConeverterSpy = (DataToJsonConverterSpy) converterFactorySpy.MCR
 				.getReturnValue("factorUsingConvertible", 0);
 
 		String dataRecordJson = (String) dataToJsonConeverterSpy.MCR.getReturnValue("toJson", 0);

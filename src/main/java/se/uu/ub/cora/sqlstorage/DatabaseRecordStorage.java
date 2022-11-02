@@ -84,7 +84,6 @@ public class DatabaseRecordStorage implements RecordStorage {
 	public DataGroup read(List<String> types, String id) {
 		try (TableFacade tableFacade = sqlDatabaseFactory.factorTableFacade()) {
 			return readAndConvertData(types, id, tableFacade);
-			// TODO: handle storageException if other errors
 		} catch (SqlNotFoundException e) {
 			throw new RecordNotFoundException(MessageFormat
 					.format("No record found for recordType(s): {0}, with id: {1}.", types, id), e);
