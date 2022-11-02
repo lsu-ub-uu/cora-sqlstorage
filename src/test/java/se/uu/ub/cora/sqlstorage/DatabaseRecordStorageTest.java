@@ -914,13 +914,13 @@ public class DatabaseRecordStorageTest {
 	@Test
 	public void testRecordExists_notFound0() {
 		sqlDatabaseFactorySpy.totalNumberOfRecordsForType = 0;
-		assertFalse(storage.recordExistsForListOfImplementingRecordTypesAndRecordId(
+		assertFalse(storage.recordExists(
 				LIST_WITH_ONE_TYPE, "someId"));
 	}
 
 	@Test
 	public void testRecordExists_TableFacadeFactoredAndCloseCalled() throws Exception {
-		assertFalse(storage.recordExistsForListOfImplementingRecordTypesAndRecordId(
+		assertFalse(storage.recordExists(
 				LIST_WITH_ONE_TYPE, "someId"));
 
 		TableFacadeSpy tableFacadeSpy = getFirstFactoredTableFacadeSpy();
@@ -931,7 +931,7 @@ public class DatabaseRecordStorageTest {
 	public void testRecordExists_NotFound() throws Exception {
 		sqlDatabaseFactorySpy.throwExceptionFromTableFacadeOnRead = true;
 		try {
-			assertFalse(storage.recordExistsForListOfImplementingRecordTypesAndRecordId(
+			assertFalse(storage.recordExists(
 					LIST_OF_TYPES, "someId"));
 			makeSureErrorIsThrownFromAboveStatements();
 
@@ -947,7 +947,7 @@ public class DatabaseRecordStorageTest {
 	public void testRecordExists() throws Exception {
 		sqlDatabaseFactorySpy.totalNumberOfRecordsForType = 1;
 
-		boolean recordExists = storage.recordExistsForListOfImplementingRecordTypesAndRecordId(
+		boolean recordExists = storage.recordExists(
 				LIST_WITH_ONE_TYPE, "someId");
 
 		TableQuerySpy tableQuerySpy = getFactoredTableQueryUsingCallNumber(0);
@@ -965,7 +965,7 @@ public class DatabaseRecordStorageTest {
 	@Test
 	public void testRecordExists_Found747() {
 		sqlDatabaseFactorySpy.totalNumberOfRecordsForType = 747;
-		assertTrue(storage.recordExistsForListOfImplementingRecordTypesAndRecordId(LIST_OF_TYPES,
+		assertTrue(storage.recordExists(LIST_OF_TYPES,
 				"someId"));
 	}
 }

@@ -448,7 +448,7 @@ public class DatabaseRecordStorage implements RecordStorage {
 	}
 
 	@Override
-	public boolean recordExistsForListOfImplementingRecordTypesAndRecordId(List<String> types,
+	public boolean recordExists(List<String> types,
 			String id) {
 		try (TableFacade tableFacade = sqlDatabaseFactory.factorTableFacade()) {
 			return tryToCheckIfRecordExistsForTypeAndId(types, id, tableFacade);
