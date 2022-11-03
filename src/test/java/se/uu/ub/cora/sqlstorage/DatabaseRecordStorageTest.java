@@ -24,6 +24,7 @@ import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertTrue;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 
@@ -128,7 +129,7 @@ public class DatabaseRecordStorageTest {
 
 	@Test
 	public void testReadTypeNotFound() throws Exception {
-		sqlDatabaseFactorySpy.throwExceptionFromTableFacadeOnRead = true;
+		sqlDatabaseFactorySpy.throwNotFoundExceptionFromTableFacadeOnRead = true;
 		try {
 			storage.read(List.of("someType", "someOtherType"), "someId");
 			makeSureErrorIsThrownFromAboveStatements();
@@ -136,8 +137,25 @@ public class DatabaseRecordStorageTest {
 		} catch (Exception e) {
 			assertTrue(e instanceof RecordNotFoundException);
 			assertEquals(e.getMessage(),
-					"No record found for recordType: [someType, someOtherType] with id: someId");
-			assertEquals(e.getCause().getMessage(), "Error from readOneRowForQuery in tablespy");
+					"No record found for recordType(s): [someType, someOtherType], with id: someId.");
+			assertEquals(e.getCause().getMessage(),
+					"Not found error from readOneRowForQuery in tablespy");
+		}
+	}
+
+	@Test
+	public void testReadTypeOtherError() throws Exception {
+		sqlDatabaseFactorySpy.throwDataExceptionFromTableFacadeOnRead = true;
+		try {
+			storage.read(List.of("someType", "someOtherType"), "someId");
+			makeSureErrorIsThrownFromAboveStatements();
+
+		} catch (Exception e) {
+			assertTrue(e instanceof StorageException);
+			assertEquals(e.getMessage(), "Read did not generate a single result for recordType(s): "
+					+ "[someType, someOtherType], with id: someId.");
+			assertEquals(e.getCause().getMessage(),
+					"Data error from readOneRowForQuery in tablespy");
 		}
 	}
 
@@ -186,7 +204,16 @@ public class DatabaseRecordStorageTest {
 
 		TableFacadeSpy tableFacadeSpy = getFirstFactoredTableFacadeSpy();
 		tableFacadeSpy.MCR.assertParameters("readRowsForQuery", 0, tableQuerySpy);
+		tableQuerySpy.MCR.assertParameters("addCondition", 0, "type", LIST_WITH_ONE_TYPE);
 		tableQuerySpy.MCR.assertParameter("addOrderByDesc", 0, "column", "id");
+	}
+
+	@Test
+	public void testReadListTableQueryFactoredAndTableFacadeCalledTypes() throws Exception {
+		storage.readList(LIST_OF_TYPES, emptyFilterSpy);
+
+		TableQuerySpy tableQuerySpy = getFactoredTableQueryUsingCallNumber(0);
+		tableQuerySpy.MCR.assertParameters("addCondition", 0, "type", LIST_OF_TYPES);
 	}
 
 	@Test
@@ -369,7 +396,6 @@ public class DatabaseRecordStorageTest {
 	}
 
 	@Test
-
 	public void testCreateParametersPassedOnForRecord() throws Exception {
 		storage.create(someType, someId, dataRecord, emptyStorageTerms, emptyLinkList, dataDivider);
 
@@ -396,12 +422,12 @@ public class DatabaseRecordStorageTest {
 	}
 
 	private String getConvertedJson(DataGroup dataRecord) {
-		DataToJsonConverterFactorySpy dataToJsonConverterFactorySpy = (DataToJsonConverterFactorySpy) dataToJsonConverterFactoryCreatorSpy.MCR
+		DataToJsonConverterFactorySpy converterFactorySpy = (DataToJsonConverterFactorySpy) dataToJsonConverterFactoryCreatorSpy.MCR
 				.getReturnValue("createFactory", 0);
 
-		dataToJsonConverterFactorySpy.MCR.assertParameters("factorUsingConvertible", 0, dataRecord);
+		converterFactorySpy.MCR.assertParameters("factorUsingConvertible", 0, dataRecord);
 
-		DataToJsonConverterSpy dataToJsonConeverterSpy = (DataToJsonConverterSpy) dataToJsonConverterFactorySpy.MCR
+		DataToJsonConverterSpy dataToJsonConeverterSpy = (DataToJsonConverterSpy) converterFactorySpy.MCR
 				.getReturnValue("factorUsingConvertible", 0);
 
 		String dataRecordJson = (String) dataToJsonConeverterSpy.MCR.getReturnValue("toJson", 0);
@@ -514,7 +540,7 @@ public class DatabaseRecordStorageTest {
 		} catch (Exception e) {
 			assertTrue(e instanceof StorageException);
 			assertEquals(e.getMessage(),
-					"Storage exception when creating record with recordType: someType with id: someId");
+					"Storage exception when creating record with recordType: someType and id: someId.");
 			assertEquals(e.getCause().getMessage(), "Error from spy");
 
 		}
@@ -656,7 +682,7 @@ public class DatabaseRecordStorageTest {
 		} catch (Exception e) {
 			assertTrue(e instanceof StorageException);
 			assertEquals(e.getMessage(),
-					"Storage exception when updating record with recordType: someType with id: someId");
+					"Storage exception when updating record with recordType: someType and id: someId.");
 			assertEquals(e.getCause().getMessage(), "Error from updateRowsUsingQuery in tablespy");
 		}
 	}
@@ -673,7 +699,7 @@ public class DatabaseRecordStorageTest {
 		} catch (Exception e) {
 			assertTrue(e instanceof RecordNotFoundException);
 			assertEquals(e.getMessage(),
-					"Record not found when updating record with recordType: someType and id: someId");
+					"Record not found when updating record with recordType: someType and id: someId.");
 		}
 	}
 
@@ -738,7 +764,7 @@ public class DatabaseRecordStorageTest {
 		} catch (Exception e) {
 			assertTrue(e instanceof StorageException);
 			assertEquals(e.getMessage(),
-					"Storage exception when deleting record with recordType: someType with id: someId");
+					"Storage exception when deleting record with recordType: someType and id: someId.");
 			assertEquals(e.getCause().getMessage(), "Error from deleteRowsUsingQuery in tablespy");
 
 		}
@@ -762,32 +788,139 @@ public class DatabaseRecordStorageTest {
 		} catch (Exception e) {
 			assertTrue(e instanceof RecordNotFoundException);
 			assertEquals(e.getMessage(),
-					"Record not found when deleting record with recordType: someType and id: someId");
+					"Record not found when deleting record with recordType: someType and id: someId.");
 		}
 	}
 
-	@Test(expectedExceptions = NotImplementedException.class, expectedExceptionsMessageRegExp = ""
-			+ "linksExistForRecord is not implemented")
-	public void testLinksExistForRecord() {
-		storage.linksExistForRecord("someType", "someId");
+	@Test
+	public void testLinksExistForRecordUsesDependencies() {
+		sqlDatabaseFactorySpy.totalNumberOfRecordsForType = 0;
+
+		storage.linksExistForRecord(someType, someId);
+
+		sqlDatabaseFactorySpy.MCR.assertMethodWasCalled("factorTableFacade");
+		sqlDatabaseFactorySpy.MCR.assertParameters("factorTableQuery", 0, "link");
+		TableQuerySpy tableQuerySpy = getFactoredTableQueryUsingCallNumber(0);
+		tableQuerySpy.MCR.assertParameters("addCondition", 0, "totype", someType);
+		tableQuerySpy.MCR.assertParameters("addCondition", 1, "toid", someId);
+
+		TableFacadeSpy tableFacadeSpy = getFirstFactoredTableFacadeSpy();
+		tableFacadeSpy.MCR.assertParameters("readNumberOfRows", 0, tableQuerySpy);
 	}
 
-	@Test(expectedExceptions = NotImplementedException.class, expectedExceptionsMessageRegExp = ""
-			+ "generateLinkCollectionPointingToRecord is not implemented")
-	public void testGenerateLinkCollectionPointingToRecord() {
-		storage.generateLinkCollectionPointingToRecord("someType", "someId");
+	@Test
+	public void testLinksExistForRecordDatabaseIsClosed() throws Exception {
+		storage.linksExistForRecord("someType", "someId");
+		TableFacadeSpy tableFacadeSpy = getFirstFactoredTableFacadeSpy();
+		tableFacadeSpy.MCR.assertMethodWasCalled("close");
+	}
+
+	@Test
+	public void testLinksExistForRecordError() throws Exception {
+		sqlDatabaseFactorySpy.throwExceptionFromTableFacadeOnRead = true;
+
+		try {
+			storage.linksExistForRecord("someType", "someId");
+			makeSureErrorIsThrownFromAboveStatements();
+
+		} catch (Exception e) {
+			assertTrue(e instanceof StorageException);
+			assertEquals(e.getMessage(),
+					"Could not determine if links exist for type: someType and id: someId.");
+			assertTrue(e.getCause() instanceof Exception);
+		}
+	}
+
+	@Test
+	public void testLinksExistForRecordNoLinksFound() {
+		sqlDatabaseFactorySpy.totalNumberOfRecordsForType = 0;
+
+		boolean exists = storage.linksExistForRecord("someType", "someId");
+
+		assertFalse(exists);
+	}
+
+	@Test
+	public void testLinksExistForRecordLinksFound() {
+		sqlDatabaseFactorySpy.totalNumberOfRecordsForType = 3;
+
+		boolean exists = storage.linksExistForRecord("someType", "someId");
+
+		assertTrue(exists);
+	}
+
+	@Test
+	public void testGetLinksToRecordNoLinksFound() {
+		sqlDatabaseFactorySpy.totalNumberOfRecordsForType = 0;
+
+		Collection<Link> links = storage.getLinksToRecord("someType", "someId");
+
+		assertEquals(links.size(), 0);
+	}
+
+	@Test
+	public void testGetLinksToRecordWithLinks() {
+		sqlDatabaseFactorySpy.totalNumberOfRecordsForType = 3;
+
+		List<Link> links = (List<Link>) storage.getLinksToRecord(someType, someId);
+
+		sqlDatabaseFactorySpy.MCR.assertParameters("factorTableQuery", 0, "link");
+		TableQuerySpy tableQuerySpy = getFactoredTableQueryUsingCallNumber(0);
+		tableQuerySpy.MCR.assertParameters("addCondition", 0, "totype", someType);
+		tableQuerySpy.MCR.assertParameters("addCondition", 1, "toid", someId);
+
+		TableFacadeSpy tableFacadeSpy = getFirstFactoredTableFacadeSpy();
+		tableFacadeSpy.MCR.assertParameters("readRowsForQuery", 0, tableQuerySpy);
+
+		List<RowSpy> rows = (List<RowSpy>) tableFacadeSpy.MCR.getReturnValue("readRowsForQuery", 0);
+		assertRows(rows, 0, links.get(0).type(), links.get(0).id());
+		assertRows(rows, 1, links.get(1).type(), links.get(1).id());
+		assertRows(rows, 2, links.get(2).type(), links.get(2).id());
+
+		assertEquals(links.size(), 3);
+	}
+
+	private void assertRows(List<RowSpy> rows, int rowNumber, String linkFromType,
+			String linkFromId) {
+		rows.get(rowNumber).MCR.assertParameters("getValueByColumn", 0, "fromtype");
+		rows.get(rowNumber).MCR.assertParameters("getValueByColumn", 1, "fromid");
+
+		rows.get(rowNumber).MCR.assertReturn("getValueByColumn", 0, linkFromType);
+		rows.get(rowNumber).MCR.assertReturn("getValueByColumn", 1, linkFromId);
+	}
+
+	@Test
+	public void testGetLinksToRecordDatabaseIsClosed() throws Exception {
+		storage.getLinksToRecord("someType", "someId");
+		TableFacadeSpy tableFacadeSpy = getFirstFactoredTableFacadeSpy();
+		tableFacadeSpy.MCR.assertMethodWasCalled("close");
+	}
+
+	@Test
+	public void testGetLinksToRecordError() throws Exception {
+		sqlDatabaseFactorySpy.throwExceptionFromTableFacadeOnRead = true;
+
+		try {
+			storage.getLinksToRecord("someType", "someId");
+			makeSureErrorIsThrownFromAboveStatements();
+
+		} catch (Exception e) {
+			assertTrue(e instanceof StorageException);
+			assertEquals(e.getMessage(), "Could not get links for type: someType and id: someId.");
+			assertTrue(e.getCause() instanceof Exception);
+		}
 	}
 
 	@Test
 	public void testRecordExists_notFound0() {
 		sqlDatabaseFactorySpy.totalNumberOfRecordsForType = 0;
-		assertFalse(storage.recordExistsForListOfImplementingRecordTypesAndRecordId(
+		assertFalse(storage.recordExists(
 				LIST_WITH_ONE_TYPE, "someId"));
 	}
 
 	@Test
 	public void testRecordExists_TableFacadeFactoredAndCloseCalled() throws Exception {
-		assertFalse(storage.recordExistsForListOfImplementingRecordTypesAndRecordId(
+		assertFalse(storage.recordExists(
 				LIST_WITH_ONE_TYPE, "someId"));
 
 		TableFacadeSpy tableFacadeSpy = getFirstFactoredTableFacadeSpy();
@@ -798,7 +931,7 @@ public class DatabaseRecordStorageTest {
 	public void testRecordExists_NotFound() throws Exception {
 		sqlDatabaseFactorySpy.throwExceptionFromTableFacadeOnRead = true;
 		try {
-			assertFalse(storage.recordExistsForListOfImplementingRecordTypesAndRecordId(
+			assertFalse(storage.recordExists(
 					LIST_OF_TYPES, "someId"));
 			makeSureErrorIsThrownFromAboveStatements();
 
@@ -814,7 +947,7 @@ public class DatabaseRecordStorageTest {
 	public void testRecordExists() throws Exception {
 		sqlDatabaseFactorySpy.totalNumberOfRecordsForType = 1;
 
-		boolean recordExists = storage.recordExistsForListOfImplementingRecordTypesAndRecordId(
+		boolean recordExists = storage.recordExists(
 				LIST_WITH_ONE_TYPE, "someId");
 
 		TableQuerySpy tableQuerySpy = getFactoredTableQueryUsingCallNumber(0);
@@ -832,7 +965,7 @@ public class DatabaseRecordStorageTest {
 	@Test
 	public void testRecordExists_Found747() {
 		sqlDatabaseFactorySpy.totalNumberOfRecordsForType = 747;
-		assertTrue(storage.recordExistsForListOfImplementingRecordTypesAndRecordId(LIST_OF_TYPES,
+		assertTrue(storage.recordExists(LIST_OF_TYPES,
 				"someId"));
 	}
 }

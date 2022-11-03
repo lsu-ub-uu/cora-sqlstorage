@@ -23,7 +23,9 @@ import java.util.List;
 
 import se.uu.ub.cora.sqldatabase.Row;
 import se.uu.ub.cora.sqldatabase.SqlConflictException;
+import se.uu.ub.cora.sqldatabase.SqlDataException;
 import se.uu.ub.cora.sqldatabase.SqlDatabaseException;
+import se.uu.ub.cora.sqldatabase.SqlNotFoundException;
 import se.uu.ub.cora.sqldatabase.table.TableFacade;
 import se.uu.ub.cora.sqldatabase.table.TableQuery;
 import se.uu.ub.cora.testutils.mcr.MethodCallRecorder;
@@ -31,6 +33,8 @@ import se.uu.ub.cora.testutils.mcr.MethodCallRecorder;
 public class TableFacadeSpy implements TableFacade {
 	public MethodCallRecorder MCR = new MethodCallRecorder();
 	public boolean throwExceptionOnRead = false;
+	public boolean throwNotFoundExceptionOnRead = false;
+	public boolean throwDataExceptionOnRead = false;
 	public boolean throwExceptionOnUpdate = false;
 	public boolean throwExceptionOnDelete = false;
 	public long totalNumberOfRecordsForType = 0;
@@ -70,13 +74,15 @@ public class TableFacadeSpy implements TableFacade {
 		if (throwExceptionOnRead) {
 			throw SqlDatabaseException.withMessage("Error from readRowsForQuery in tablespy");
 		}
-		RowSpy result = new RowSpy();
-		RowSpy result2 = new RowSpy();
-		RowSpy result3 = new RowSpy();
 		List<Row> listResult = new ArrayList<>();
-		listResult.add(result);
-		listResult.add(result2);
-		listResult.add(result3);
+		if (totalNumberOfRecordsForType > 0) {
+			RowSpy result = new RowSpy();
+			RowSpy result2 = new RowSpy();
+			RowSpy result3 = new RowSpy();
+			listResult.add(result);
+			listResult.add(result2);
+			listResult.add(result3);
+		}
 
 		MCR.addReturned(listResult);
 		return listResult;
@@ -87,6 +93,13 @@ public class TableFacadeSpy implements TableFacade {
 		MCR.addCall("tableQuery", tableQuery);
 		if (throwExceptionOnRead) {
 			throw SqlDatabaseException.withMessage("Error from readOneRowForQuery in tablespy");
+		}
+		if (throwNotFoundExceptionOnRead) {
+			throw SqlNotFoundException
+					.withMessage("Not found error from readOneRowForQuery in tablespy");
+		}
+		if (throwDataExceptionOnRead) {
+			throw SqlDataException.withMessage("Data error from readOneRowForQuery in tablespy");
 		}
 		RowSpy result = new RowSpy();
 
