@@ -169,7 +169,7 @@ public class DatabaseRecordStorage implements RecordStorage {
 			TableQuery storageTermsQuery) {
 		storageTermsQuery.addParameter("recordtype", type);
 		storageTermsQuery.addParameter("recordid", id);
-		storageTermsQuery.addParameter("storagetermid", storageTerm.id());
+		storageTermsQuery.addParameter("storagetermid", storageTerm.storageTermId());
 		storageTermsQuery.addParameter("value", storageTerm.value());
 		storageTermsQuery.addParameter("storagekey", storageTerm.storageKey());
 	}
