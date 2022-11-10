@@ -345,7 +345,7 @@ public class DatabaseRecordStorage implements RecordStorage {
 	}
 
 	private StorageReadResult readAndConvertDataList(List<String> types, TableFacade tableFacade,
-			DataGroup filter) {
+			Filter filter) {
 		List<Row> readRows = readRowsFromDatabase(types, tableFacade, filter);
 		long totalNumberOfMatches = readNumberOfRows(types, tableFacade);
 		StorageReadResult readResult = convertRowsToListOfDataGroups(readRows);
@@ -354,12 +354,12 @@ public class DatabaseRecordStorage implements RecordStorage {
 	}
 
 	private List<Row> readRowsFromDatabase(List<String> types, TableFacade tableFacade,
-			DataGroup filter) {
+			Filter filter) {
 		TableQuery tableQuery = assembleReadRowsQuery(types, filter);
 		return tableFacade.readRowsForQuery(tableQuery);
 	}
 
-	private TableQuery assembleReadRowsQuery(List<String> types, DataGroup filter) {
+	private TableQuery assembleReadRowsQuery(List<String> types, Filter filter) {
 		TableQuery tableQuery = sqlDatabaseFactory.factorTableQuery(TABLE_RECORD);
 		tableQuery.addCondition(TYPE_COLUMN, types);
 		possiblySetFromNoInQueryFromFilter(tableQuery, filter);
@@ -368,17 +368,15 @@ public class DatabaseRecordStorage implements RecordStorage {
 		return tableQuery;
 	}
 
-	private void possiblySetFromNoInQueryFromFilter(TableQuery tableQuery, DataGroup filter) {
-		if (filter.containsChildWithNameInData("fromNo")) {
-			String fromNo = filter.getFirstAtomicValueWithNameInData("fromNo");
-			tableQuery.setFromNo(Long.valueOf(fromNo));
+	private void possiblySetFromNoInQueryFromFilter(TableQuery tableQuery, Filter filter) {
+		if (!filter.fromNoIsDefault()) {
+			tableQuery.setFromNo(filter.fromNo);
 		}
 	}
 
-	private void possiblySetToNoInQueryFromFilter(TableQuery tableQuery, DataGroup filter) {
-		if (filter.containsChildWithNameInData("toNo")) {
-			String toNo = filter.getFirstAtomicValueWithNameInData("toNo");
-			tableQuery.setToNo(Long.valueOf(toNo));
+	private void possiblySetToNoInQueryFromFilter(TableQuery tableQuery, Filter filter) {
+		if (!filter.toNoIsDefault()) {
+			tableQuery.setToNo(filter.toNo);
 		}
 	}
 
@@ -449,8 +447,7 @@ public class DatabaseRecordStorage implements RecordStorage {
 	}
 
 	@Override
-	public boolean recordExists(List<String> types,
-			String id) {
+	public boolean recordExists(List<String> types, String id) {
 		try (TableFacade tableFacade = sqlDatabaseFactory.factorTableFacade()) {
 			return tryToCheckIfRecordExistsForTypeAndId(types, id, tableFacade);
 		} catch (SqlDatabaseException e) {
