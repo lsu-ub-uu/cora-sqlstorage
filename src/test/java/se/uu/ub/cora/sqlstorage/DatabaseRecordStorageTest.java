@@ -285,7 +285,6 @@ public class DatabaseRecordStorageTest {
 
 		TableQuerySpy tableQuerySpy = getFactoredTableQueryUsingCallNumber(0);
 
-		tableQuerySpy.MCR.assertParameters("setFromNo", 0, 1L);
 		tableQuerySpy.MCR.assertMethodNotCalled("setFromNo");
 		tableQuerySpy.MCR.assertParameters("setToNo", 0, 10L);
 		tableQuerySpy.MCR.assertParameter("addOrderByDesc", 0, "column", "id");
