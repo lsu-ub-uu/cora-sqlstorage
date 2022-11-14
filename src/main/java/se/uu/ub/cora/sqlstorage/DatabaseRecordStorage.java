@@ -44,6 +44,7 @@ import se.uu.ub.cora.sqldatabase.SqlDatabaseFactory;
 import se.uu.ub.cora.sqldatabase.SqlNotFoundException;
 import se.uu.ub.cora.sqldatabase.table.TableFacade;
 import se.uu.ub.cora.sqldatabase.table.TableQuery;
+import se.uu.ub.cora.storage.Filter;
 import se.uu.ub.cora.storage.RecordConflictException;
 import se.uu.ub.cora.storage.RecordNotFoundException;
 import se.uu.ub.cora.storage.RecordStorage;
@@ -169,7 +170,7 @@ public class DatabaseRecordStorage implements RecordStorage {
 			TableQuery storageTermsQuery) {
 		storageTermsQuery.addParameter("recordtype", type);
 		storageTermsQuery.addParameter("recordid", id);
-		storageTermsQuery.addParameter("storagetermid", storageTerm.id());
+		storageTermsQuery.addParameter("storagetermid", storageTerm.storageTermId());
 		storageTermsQuery.addParameter("value", storageTerm.value());
 		storageTermsQuery.addParameter("storagekey", storageTerm.storageKey());
 	}
@@ -329,7 +330,7 @@ public class DatabaseRecordStorage implements RecordStorage {
 	}
 
 	@Override
-	public StorageReadResult readList(List<String> types, DataGroup filter) {
+	public StorageReadResult readList(List<String> types, Filter filter) {
 		try (TableFacade tableFacade = sqlDatabaseFactory.factorTableFacade()) {
 			return readAndConvertDataList(types, tableFacade, filter);
 		} catch (SqlDatabaseException e) {
@@ -344,7 +345,7 @@ public class DatabaseRecordStorage implements RecordStorage {
 	}
 
 	private StorageReadResult readAndConvertDataList(List<String> types, TableFacade tableFacade,
-			DataGroup filter) {
+			Filter filter) {
 		List<Row> readRows = readRowsFromDatabase(types, tableFacade, filter);
 		long totalNumberOfMatches = readNumberOfRows(types, tableFacade);
 		StorageReadResult readResult = convertRowsToListOfDataGroups(readRows);
@@ -353,12 +354,12 @@ public class DatabaseRecordStorage implements RecordStorage {
 	}
 
 	private List<Row> readRowsFromDatabase(List<String> types, TableFacade tableFacade,
-			DataGroup filter) {
+			Filter filter) {
 		TableQuery tableQuery = assembleReadRowsQuery(types, filter);
 		return tableFacade.readRowsForQuery(tableQuery);
 	}
 
-	private TableQuery assembleReadRowsQuery(List<String> types, DataGroup filter) {
+	private TableQuery assembleReadRowsQuery(List<String> types, Filter filter) {
 		TableQuery tableQuery = sqlDatabaseFactory.factorTableQuery(TABLE_RECORD);
 		tableQuery.addCondition(TYPE_COLUMN, types);
 		possiblySetFromNoInQueryFromFilter(tableQuery, filter);
@@ -367,17 +368,15 @@ public class DatabaseRecordStorage implements RecordStorage {
 		return tableQuery;
 	}
 
-	private void possiblySetFromNoInQueryFromFilter(TableQuery tableQuery, DataGroup filter) {
-		if (filter.containsChildWithNameInData("fromNo")) {
-			String fromNo = filter.getFirstAtomicValueWithNameInData("fromNo");
-			tableQuery.setFromNo(Long.valueOf(fromNo));
+	private void possiblySetFromNoInQueryFromFilter(TableQuery tableQuery, Filter filter) {
+		if (!filter.fromNoIsDefault()) {
+			tableQuery.setFromNo(filter.fromNo);
 		}
 	}
 
-	private void possiblySetToNoInQueryFromFilter(TableQuery tableQuery, DataGroup filter) {
-		if (filter.containsChildWithNameInData("toNo")) {
-			String toNo = filter.getFirstAtomicValueWithNameInData("toNo");
-			tableQuery.setToNo(Long.valueOf(toNo));
+	private void possiblySetToNoInQueryFromFilter(TableQuery tableQuery, Filter filter) {
+		if (!filter.toNoIsDefault()) {
+			tableQuery.setToNo(filter.toNo);
 		}
 	}
 
@@ -448,8 +447,7 @@ public class DatabaseRecordStorage implements RecordStorage {
 	}
 
 	@Override
-	public boolean recordExists(List<String> types,
-			String id) {
+	public boolean recordExists(List<String> types, String id) {
 		try (TableFacade tableFacade = sqlDatabaseFactory.factorTableFacade()) {
 			return tryToCheckIfRecordExistsForTypeAndId(types, id, tableFacade);
 		} catch (SqlDatabaseException e) {
@@ -483,7 +481,7 @@ public class DatabaseRecordStorage implements RecordStorage {
 	}
 
 	@Override
-	public long getTotalNumberOfRecordsForTypes(List<String> types, DataGroup filter) {
+	public long getTotalNumberOfRecordsForTypes(List<String> types, Filter filter) {
 		try (TableFacade tableFacade = sqlDatabaseFactory.factorTableFacade()) {
 			return readNumberOfRows(types, tableFacade);
 		} catch (SqlDatabaseException e) {

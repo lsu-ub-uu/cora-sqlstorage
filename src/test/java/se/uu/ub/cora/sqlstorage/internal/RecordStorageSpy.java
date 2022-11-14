@@ -9,6 +9,7 @@ import se.uu.ub.cora.data.collected.StorageTerm;
 import se.uu.ub.cora.json.parser.JsonParser;
 import se.uu.ub.cora.sqldatabase.SqlDatabaseFactory;
 import se.uu.ub.cora.sqlstorage.DatabaseRecordStorage;
+import se.uu.ub.cora.storage.Filter;
 import se.uu.ub.cora.storage.StorageReadResult;
 
 public class RecordStorageSpy extends DatabaseRecordStorage {
@@ -51,7 +52,7 @@ public class RecordStorageSpy extends DatabaseRecordStorage {
 	}
 
 	@Override
-	public StorageReadResult readList(List<String> type, DataGroup filter) {
+	public StorageReadResult readList(List<String> type, Filter filter) {
 		// TODO Auto-generated method stub
 		return null;
 	}
@@ -70,7 +71,7 @@ public class RecordStorageSpy extends DatabaseRecordStorage {
 	}
 
 	@Override
-	public long getTotalNumberOfRecordsForTypes(List<String> types, DataGroup filter) {
+	public long getTotalNumberOfRecordsForTypes(List<String> types, Filter filter) {
 		// TODO Auto-generated method stub
 		return 0;
 	}
