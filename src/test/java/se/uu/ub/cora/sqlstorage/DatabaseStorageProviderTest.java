@@ -68,7 +68,7 @@ public class DatabaseStorageProviderTest {
 
 	@Test
 	public void testGetOrderToSelectImplementationsByIsTen() {
-		assertEquals(provider.getOrderToSelectImplementionsBy(), 10);
+		assertEquals(provider.getOrderToSelectImplementionsBy(), -10);
 	}
 
 	@Test

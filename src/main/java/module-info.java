@@ -17,7 +17,8 @@ module se.uu.ub.cora.sqlstorage {
 
 	// Temporal export. Should be removed when DatabaseStorageProvider can be load via a service
 	// loader.
-	// exports se.uu.ub.cora.sqlstorage;
+	exports se.uu.ub.cora.sqlstorage;
 
-	provides se.uu.ub.cora.storage.RecordStorageInstanceProvider with DatabaseStorageInstanceProvider;
+	provides se.uu.ub.cora.storage.RecordStorageInstanceProvider
+			with DatabaseStorageInstanceProvider;
 }
