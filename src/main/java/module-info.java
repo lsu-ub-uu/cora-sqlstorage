@@ -8,7 +8,7 @@ import se.uu.ub.cora.sqlstorage.DatabaseStorageInstanceProvider;
  * @provides se.uu.ub.cora.storage.RecordStorageProvider
  */
 module se.uu.ub.cora.sqlstorage {
-	requires se.uu.ub.cora.storage;
+	requires transitive se.uu.ub.cora.storage;
 	requires se.uu.ub.cora.sqldatabase;
 	requires se.uu.ub.cora.logger;
 	requires org.postgresql.jdbc;

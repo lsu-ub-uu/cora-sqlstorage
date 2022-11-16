@@ -22,16 +22,22 @@ import java.util.Set;
 
 import se.uu.ub.cora.sqldatabase.Row;
 import se.uu.ub.cora.testutils.mcr.MethodCallRecorder;
+import se.uu.ub.cora.testutils.mrv.MethodReturnValues;
 
 public class RowSpy implements Row {
 	public MethodCallRecorder MCR = new MethodCallRecorder();
+	public MethodReturnValues MRV = new MethodReturnValues();
+
+	public RowSpy() {
+		MCR.useMRV(MRV);
+
+		MRV.setDefaultReturnValuesSupplier("getValueByColumn",
+				() -> "some value from getValueByColumn in rowSpy");
+	}
 
 	@Override
 	public Object getValueByColumn(String columnName) {
-		MCR.addCall("columnName", columnName);
-		String out = "some value from getValueByColumn in rowSpy";
-		MCR.addReturned(out);
-		return out;
+		return MCR.addCallAndReturnFromMRV("columnName", columnName);
 	}
 
 	@Override

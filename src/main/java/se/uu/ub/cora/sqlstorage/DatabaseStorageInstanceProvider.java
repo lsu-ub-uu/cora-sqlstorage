@@ -26,6 +26,7 @@ import se.uu.ub.cora.logger.LoggerProvider;
 import se.uu.ub.cora.sqldatabase.SqlDatabaseFactory;
 import se.uu.ub.cora.sqldatabase.SqlDatabaseFactoryImp;
 import se.uu.ub.cora.sqlstorage.internal.DatabaseStorageInstance;
+import se.uu.ub.cora.storage.RecordStorage;
 import se.uu.ub.cora.storage.RecordStorageInstanceProvider;
 
 public class DatabaseStorageInstanceProvider implements RecordStorageInstanceProvider {
@@ -40,7 +41,7 @@ public class DatabaseStorageInstanceProvider implements RecordStorageInstancePro
 	}
 
 	@Override
-	public DatabaseRecordStorage getRecordStorage() {
+	public RecordStorage getRecordStorage() {
 		possiblyStartStorage();
 		return DatabaseStorageInstance.getInstance();
 	}

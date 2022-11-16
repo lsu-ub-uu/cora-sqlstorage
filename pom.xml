@@ -36,6 +36,7 @@
 
 	<properties>
 		<storage.version>8.0-SNAPSHOT</storage.version>
+		<storagespies.version>1.4-SNAPSHOT</storagespies.version>
 		<initialize.version>1.3.0</initialize.version>
 		<data.version>7.6-SNAPSHOT</data.version>
 		<json.version>3.7.0</json.version>
@@ -59,6 +60,12 @@
 			<artifactId>storage</artifactId>
 			<version>${storage.version}</version>
 			<scope>provided</scope>
+		</dependency>
+		<dependency>
+			<groupId>se.uu.ub.cora</groupId>
+			<artifactId>storage-spies</artifactId>
+			<version>${storagespies.version}</version>
+			<scope>test</scope>
 		</dependency>
 		<dependency>
 			<groupId>se.uu.ub.cora</groupId>

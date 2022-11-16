@@ -80,7 +80,7 @@ public class DatabaseStorageProviderTest {
 
 	@Test
 	public void testDatabaseRecordStorageStartedWithSqlDatabaseFactory() throws Exception {
-		DatabaseRecordStorage recordStorage = provider.getRecordStorage();
+		DatabaseRecordStorage recordStorage = (DatabaseRecordStorage) provider.getRecordStorage();
 		SqlDatabaseFactoryImp sqlDatabaseFactory = (SqlDatabaseFactoryImp) recordStorage
 				.onlyForTestGetSqlDatabaseFactory();
 		assertNotNull(sqlDatabaseFactory);
@@ -90,7 +90,7 @@ public class DatabaseStorageProviderTest {
 
 	@Test
 	public void testDatabaseRecordStorageStartedWithJsonParser() throws Exception {
-		DatabaseRecordStorage recordStorage = provider.getRecordStorage();
+		DatabaseRecordStorage recordStorage = (DatabaseRecordStorage) provider.getRecordStorage();
 		JsonParser jsonParser = recordStorage.onlyForTestGetJsonParser();
 		assertTrue(jsonParser instanceof OrgJsonParser);
 	}
@@ -121,8 +121,8 @@ public class DatabaseStorageProviderTest {
 
 	@Test
 	public void testOnlyOneInstance() throws Exception {
-		DatabaseRecordStorage recordStorage = provider.getRecordStorage();
-		DatabaseRecordStorage recordStorage2 = provider.getRecordStorage();
+		DatabaseRecordStorage recordStorage = (DatabaseRecordStorage) provider.getRecordStorage();
+		DatabaseRecordStorage recordStorage2 = (DatabaseRecordStorage) provider.getRecordStorage();
 		assertSame(recordStorage2, recordStorage);
 	}
 
@@ -136,9 +136,9 @@ public class DatabaseStorageProviderTest {
 
 	@Test
 	public void testOneStaticInstance() throws Exception {
-		DatabaseRecordStorage recordStorage = provider.getRecordStorage();
+		DatabaseRecordStorage recordStorage = (DatabaseRecordStorage) provider.getRecordStorage();
 		provider = new DatabaseStorageInstanceProvider();
-		DatabaseRecordStorage recordStorage2 = provider.getRecordStorage();
+		DatabaseRecordStorage recordStorage2 = (DatabaseRecordStorage) provider.getRecordStorage();
 		assertSame(recordStorage2, recordStorage);
 	}
 }

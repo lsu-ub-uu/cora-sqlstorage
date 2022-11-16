@@ -18,21 +18,21 @@
  */
 package se.uu.ub.cora.sqlstorage.internal;
 
-import se.uu.ub.cora.sqlstorage.DatabaseRecordStorage;
+import se.uu.ub.cora.storage.RecordStorage;
 
 public class DatabaseStorageInstance {
 
-	private static DatabaseRecordStorage instance;
+	private static RecordStorage instance;
 
 	private DatabaseStorageInstance() {
 		throw new UnsupportedOperationException();
 	}
 
-	public static void setInstance(DatabaseRecordStorage storage) {
+	public static void setInstance(RecordStorage storage) {
 		instance = storage;
 	}
 
-	public static DatabaseRecordStorage getInstance() {
+	public static RecordStorage getInstance() {
 		return instance;
 	}
 

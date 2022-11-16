@@ -27,7 +27,8 @@ import java.lang.reflect.Modifier;
 
 import org.testng.annotations.Test;
 
-import se.uu.ub.cora.sqlstorage.DatabaseRecordStorage;
+import se.uu.ub.cora.storage.RecordStorage;
+import se.uu.ub.cora.storage.spies.RecordStorageSpy;
 
 public class DatabaseStorageInstanceTest {
 
@@ -49,7 +50,7 @@ public class DatabaseStorageInstanceTest {
 
 	@Test
 	public void testSetInstance() {
-		DatabaseRecordStorage storage = new RecordStorageSpy(null, null);
+		RecordStorage storage = new RecordStorageSpy();
 		DatabaseStorageInstance.setInstance(storage);
 		assertSame(DatabaseStorageInstance.getInstance(), storage);
 	}

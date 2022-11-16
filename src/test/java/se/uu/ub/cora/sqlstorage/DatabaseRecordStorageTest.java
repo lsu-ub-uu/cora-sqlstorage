@@ -23,10 +23,10 @@ import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertTrue;
 
-import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 
 import org.postgresql.util.PGobject;
 import org.testng.annotations.BeforeMethod;
@@ -64,8 +64,8 @@ public class DatabaseRecordStorageTest {
 	private JsonParserSpy jsonParserSpy;
 	private JsonToDataConverterFactorySpy factoryCreatorSpy;
 	private Filter filter;
-	private List<StorageTerm> emptyStorageTerms;
-	private List<Link> emptyLinkList;
+	private Set<StorageTerm> emptyStorageTerms;
+	private Set<Link> emptyLinkSet;
 	private DataToJsonConverterFactoryCreatorSpy dataToJsonConverterFactoryCreatorSpy;
 	private DataGroup dataRecord;
 	private String dataDivider;
@@ -75,8 +75,8 @@ public class DatabaseRecordStorageTest {
 	@BeforeMethod
 	public void beforeMethod() {
 		filter = new Filter();
-		emptyStorageTerms = Collections.emptyList();
-		emptyLinkList = new ArrayList<>();
+		emptyStorageTerms = new LinkedHashSet<>();
+		emptyLinkSet = new LinkedHashSet<>();
 		factoryCreatorSpy = new JsonToDataConverterFactorySpy();
 		JsonToDataConverterProvider.setJsonToDataConverterFactory(factoryCreatorSpy);
 		dataToJsonConverterFactoryCreatorSpy = new DataToJsonConverterFactoryCreatorSpy();
@@ -384,7 +384,7 @@ public class DatabaseRecordStorageTest {
 		DataGroup dataRecord = new DataGroupSpy();
 		String someDataDivider = "someDataDivider";
 
-		storage.create("someType", "someId", dataRecord, emptyStorageTerms, emptyLinkList,
+		storage.create("someType", "someId", dataRecord, emptyStorageTerms, emptyLinkSet,
 				someDataDivider);
 
 		TableFacadeSpy tableFacadeSpy = getFirstFactoredTableFacadeSpy();
@@ -395,7 +395,7 @@ public class DatabaseRecordStorageTest {
 
 	@Test
 	public void testCreateParametersPassedOnForRecord() throws Exception {
-		storage.create(someType, someId, dataRecord, emptyStorageTerms, emptyLinkList, dataDivider);
+		storage.create(someType, someId, dataRecord, emptyStorageTerms, emptyLinkSet, dataDivider);
 
 		String dataRecordJson = getConvertedJson(dataRecord);
 
@@ -435,18 +435,19 @@ public class DatabaseRecordStorageTest {
 	@Test
 	public void testCreateParametersPassedOnForStorageTerm() throws Exception {
 		sqlDatabaseFactorySpy.usingTransaction = true;
-		List<StorageTerm> storageTerms = createStorageTerms();
+		Set<StorageTerm> storageTerms = createStorageTerms();
 
-		storage.create(someType, someId, dataRecord, storageTerms, emptyLinkList, dataDivider);
+		storage.create(someType, someId, dataRecord, storageTerms, emptyLinkSet, dataDivider);
 
 		sqlDatabaseFactorySpy.MCR.assertNumberOfCallsToMethod("factorTableQuery", 3);
 		sqlDatabaseFactorySpy.MCR.assertParameters("factorTableQuery", 1, "storageterm");
 		sqlDatabaseFactorySpy.MCR.assertParameters("factorTableQuery", 2, "storageterm");
 		TableQuerySpy tableQuery1 = getFactoredTableQueryUsingCallNumber(1);
-		assertStorageTermAsTableQuery(storageTerms.get(0), tableQuery1);
+		Object[] storageTermsArray = storageTerms.toArray();
+		assertStorageTermAsTableQuery((StorageTerm) storageTermsArray[0], tableQuery1);
 
 		TableQuerySpy tableQuery2 = getFactoredTableQueryUsingCallNumber(2);
-		assertStorageTermAsTableQuery(storageTerms.get(1), tableQuery2);
+		assertStorageTermAsTableQuery((StorageTerm) storageTermsArray[1], tableQuery2);
 
 		TableFacadeSpy firstFactoredTableFacadeSpy = getFirstFactoredTableFacadeSpy();
 		firstFactoredTableFacadeSpy.MCR.assertNumberOfCallsToMethod("insertRowUsingQuery", 3);
@@ -454,12 +455,10 @@ public class DatabaseRecordStorageTest {
 		firstFactoredTableFacadeSpy.MCR.assertParameters("insertRowUsingQuery", 2, tableQuery2);
 	}
 
-	private List<StorageTerm> createStorageTerms() {
-		StorageTerm storageTerm1 = new StorageTerm("someStorageTermId", "someStorageKey",
-				"someValue");
-		StorageTerm storageTerm2 = new StorageTerm("someStorageTermId", "someStorageKey2",
-				"someValue2");
-		List<StorageTerm> storageTerms = List.of(storageTerm1, storageTerm2);
+	private Set<StorageTerm> createStorageTerms() {
+		Set<StorageTerm> storageTerms = new LinkedHashSet<>();
+		storageTerms.add(new StorageTerm("someStorageTermId", "someStorageKey", "someValue"));
+		storageTerms.add(new StorageTerm("someStorageTermId", "someStorageKey2", "someValue2"));
 		return storageTerms;
 	}
 
@@ -477,7 +476,7 @@ public class DatabaseRecordStorageTest {
 	@Test
 	public void testCreateParametersPassedOnForLink() throws Exception {
 		sqlDatabaseFactorySpy.usingTransaction = true;
-		List<Link> links = createLinks();
+		Set<Link> links = createLinks();
 
 		storage.create(someType, someId, dataRecord, emptyStorageTerms, links, dataDivider);
 
@@ -485,9 +484,9 @@ public class DatabaseRecordStorageTest {
 		sqlDatabaseFactorySpy.MCR.assertParameters("factorTableQuery", 1, "link");
 		sqlDatabaseFactorySpy.MCR.assertParameters("factorTableQuery", 2, "link");
 		TableQuerySpy tableQuery1 = getFactoredTableQueryUsingCallNumber(1);
-		assertLinkAsTableQuery(links.get(0), tableQuery1);
+		assertLinkAsTableQuery((Link) links.toArray()[0], tableQuery1);
 		TableQuerySpy tableQuery2 = getFactoredTableQueryUsingCallNumber(2);
-		assertLinkAsTableQuery(links.get(1), tableQuery2);
+		assertLinkAsTableQuery((Link) links.toArray()[1], tableQuery2);
 
 		TableFacadeSpy firstFactoredTableFacadeSpy = getFirstFactoredTableFacadeSpy();
 		firstFactoredTableFacadeSpy.MCR.assertNumberOfCallsToMethod("insertRowUsingQuery", 3);
@@ -496,11 +495,10 @@ public class DatabaseRecordStorageTest {
 
 	}
 
-	private List<Link> createLinks() {
-		Link link1 = new Link("toType1", "toId1");
-		Link link2 = new Link("toType2", "toId2");
-
-		List<Link> links = List.of(link1, link2);
+	private Set<Link> createLinks() {
+		Set<Link> links = new LinkedHashSet<>();
+		links.add(new Link("toType1", "toId1"));
+		links.add(new Link("toType2", "toId2"));
 		return links;
 	}
 
@@ -516,7 +514,7 @@ public class DatabaseRecordStorageTest {
 		sqlDatabaseFactorySpy.throwDuplicateExceptionFromTableFacade = true;
 
 		try {
-			storage.create(someType, someId, dataRecord, emptyStorageTerms, emptyLinkList,
+			storage.create(someType, someId, dataRecord, emptyStorageTerms, emptyLinkSet,
 					dataDivider);
 			makeSureErrorIsThrownFromAboveStatements();
 		} catch (Exception e) {
@@ -533,7 +531,7 @@ public class DatabaseRecordStorageTest {
 		sqlDatabaseFactorySpy.throwSqlExceptionFromTableFacade = true;
 
 		try {
-			storage.create(someType, someId, dataRecord, emptyStorageTerms, emptyLinkList,
+			storage.create(someType, someId, dataRecord, emptyStorageTerms, emptyLinkSet,
 					dataDivider);
 			makeSureErrorIsThrownFromAboveStatements();
 		} catch (Exception e) {
@@ -547,7 +545,7 @@ public class DatabaseRecordStorageTest {
 
 	@Test
 	public void testUpdateClosed() throws Exception {
-		storage.update(someType, someId, dataRecord, emptyStorageTerms, emptyLinkList, dataDivider);
+		storage.update(someType, someId, dataRecord, emptyStorageTerms, emptyLinkSet, dataDivider);
 		TableFacadeSpy tableFacadeSpy = getFirstFactoredTableFacadeSpy();
 		tableFacadeSpy.MCR.assertMethodWasCalled("close");
 
@@ -557,7 +555,7 @@ public class DatabaseRecordStorageTest {
 	public void testUpdateParametersAssertRecord() throws Exception {
 		sqlDatabaseFactorySpy.usingTransaction = true;
 
-		storage.update(someType, someId, dataRecord, emptyStorageTerms, emptyLinkList, dataDivider);
+		storage.update(someType, someId, dataRecord, emptyStorageTerms, emptyLinkSet, dataDivider);
 
 		String dataRecordJson = getConvertedJson(dataRecord);
 
@@ -589,9 +587,9 @@ public class DatabaseRecordStorageTest {
 	@Test
 	public void testUpdateAssertStoragTerm() throws Exception {
 		sqlDatabaseFactorySpy.usingTransaction = true;
-		List<StorageTerm> storageTerms = createStorageTerms();
+		Set<StorageTerm> storageTerms = createStorageTerms();
 
-		storage.update(someType, someId, dataRecord, storageTerms, emptyLinkList, dataDivider);
+		storage.update(someType, someId, dataRecord, storageTerms, emptyLinkSet, dataDivider);
 
 		sqlDatabaseFactorySpy.MCR.assertParameters("factorTableQuery", 0, "storageterm");
 		TableQuerySpy deleteTableQuerySpy = getFactoredTableQueryUsingCallNumber(0);
@@ -606,10 +604,11 @@ public class DatabaseRecordStorageTest {
 		sqlDatabaseFactorySpy.MCR.assertParameters("factorTableQuery", 2, "storageterm");
 		sqlDatabaseFactorySpy.MCR.assertParameters("factorTableQuery", 3, "storageterm");
 		TableQuerySpy tableQuery1 = getFactoredTableQueryUsingCallNumber(2);
-		assertStorageTermAsTableQuery(storageTerms.get(0), tableQuery1);
+		Object[] storageTermsArray = storageTerms.toArray();
+		assertStorageTermAsTableQuery((StorageTerm) storageTermsArray[0], tableQuery1);
 
 		TableQuerySpy tableQuery2 = getFactoredTableQueryUsingCallNumber(3);
-		assertStorageTermAsTableQuery(storageTerms.get(1), tableQuery2);
+		assertStorageTermAsTableQuery((StorageTerm) storageTermsArray[1], tableQuery2);
 
 		firstFactoredTableFacadeSpy.MCR.assertNumberOfCallsToMethod("insertRowUsingQuery", 2);
 		firstFactoredTableFacadeSpy.MCR.assertParameters("insertRowUsingQuery", 0, tableQuery1);
@@ -619,7 +618,7 @@ public class DatabaseRecordStorageTest {
 	@Test
 	public void testUpdateAssertLink() throws Exception {
 		sqlDatabaseFactorySpy.usingTransaction = true;
-		List<Link> links = createLinks();
+		Set<Link> links = createLinks();
 		storage.update(someType, someId, dataRecord, emptyStorageTerms, links, dataDivider);
 
 		sqlDatabaseFactorySpy.MCR.assertParameters("factorTableQuery", 1, "link");
@@ -634,9 +633,9 @@ public class DatabaseRecordStorageTest {
 		sqlDatabaseFactorySpy.MCR.assertParameters("factorTableQuery", 2, "link");
 		sqlDatabaseFactorySpy.MCR.assertParameters("factorTableQuery", 3, "link");
 		TableQuerySpy tableQuery1 = getFactoredTableQueryUsingCallNumber(2);
-		assertLinkAsTableQuery(links.get(0), tableQuery1);
+		assertLinkAsTableQuery((Link) links.toArray()[0], tableQuery1);
 		TableQuerySpy tableQuery2 = getFactoredTableQueryUsingCallNumber(3);
-		assertLinkAsTableQuery(links.get(1), tableQuery2);
+		assertLinkAsTableQuery((Link) links.toArray()[1], tableQuery2);
 
 		firstFactoredTableFacadeSpy.MCR.assertNumberOfCallsToMethod("insertRowUsingQuery", 2);
 		firstFactoredTableFacadeSpy.MCR.assertParameters("insertRowUsingQuery", 0, tableQuery1);
@@ -646,7 +645,7 @@ public class DatabaseRecordStorageTest {
 	@Test
 	public void testUpdateParameterRecordNotValidJson() throws Exception {
 
-		storage.update(someType, someId, dataRecord, emptyStorageTerms, emptyLinkList, dataDivider);
+		storage.update(someType, someId, dataRecord, emptyStorageTerms, emptyLinkSet, dataDivider);
 
 		String dataRecordJson = getConvertedJson(dataRecord);
 
@@ -674,7 +673,7 @@ public class DatabaseRecordStorageTest {
 	public void testUpdateTypeOrIdNotFound() throws Exception {
 		sqlDatabaseFactorySpy.throwExceptionFromTableFacadeOnUpdate = true;
 		try {
-			storage.update(someType, someId, dataRecord, emptyStorageTerms, emptyLinkList,
+			storage.update(someType, someId, dataRecord, emptyStorageTerms, emptyLinkSet,
 					dataDivider);
 			makeSureErrorIsThrownFromAboveStatements();
 
@@ -691,7 +690,7 @@ public class DatabaseRecordStorageTest {
 		sqlDatabaseFactorySpy.numberOfAffectedRows = 0;
 
 		try {
-			storage.update(someType, someId, dataRecord, emptyStorageTerms, emptyLinkList,
+			storage.update(someType, someId, dataRecord, emptyStorageTerms, emptyLinkSet,
 					dataDivider);
 			makeSureErrorIsThrownFromAboveStatements();
 
@@ -859,9 +858,10 @@ public class DatabaseRecordStorageTest {
 
 	@Test
 	public void testGetLinksToRecordWithLinks() {
+
 		sqlDatabaseFactorySpy.totalNumberOfRecordsForType = 3;
 
-		List<Link> links = (List<Link>) storage.getLinksToRecord(someType, someId);
+		Set<Link> links = storage.getLinksToRecord(someType, someId);
 
 		sqlDatabaseFactorySpy.MCR.assertParameters("factorTableQuery", 0, "link");
 		TableQuerySpy tableQuerySpy = getFactoredTableQueryUsingCallNumber(0);
@@ -872,9 +872,13 @@ public class DatabaseRecordStorageTest {
 		tableFacadeSpy.MCR.assertParameters("readRowsForQuery", 0, tableQuerySpy);
 
 		List<RowSpy> rows = (List<RowSpy>) tableFacadeSpy.MCR.getReturnValue("readRowsForQuery", 0);
-		assertRows(rows, 0, links.get(0).type(), links.get(0).id());
-		assertRows(rows, 1, links.get(1).type(), links.get(1).id());
-		assertRows(rows, 2, links.get(2).type(), links.get(2).id());
+		Object[] linksArray = links.toArray();
+		Link link1 = (Link) linksArray[0];
+		Link link2 = (Link) linksArray[1];
+		Link link3 = (Link) linksArray[2];
+		assertRows(rows, 0, link1.type(), link1.id());
+		assertRows(rows, 1, link2.type(), link2.id());
+		assertRows(rows, 2, link3.type(), link3.id());
 
 		assertEquals(links.size(), 3);
 	}

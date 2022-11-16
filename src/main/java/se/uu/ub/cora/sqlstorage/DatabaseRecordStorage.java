@@ -21,8 +21,9 @@ package se.uu.ub.cora.sqlstorage;
 import java.sql.SQLException;
 import java.text.MessageFormat;
 import java.util.ArrayList;
-import java.util.Collection;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 
 import org.postgresql.util.PGobject;
 
@@ -121,8 +122,8 @@ public class DatabaseRecordStorage implements RecordStorage {
 	}
 
 	@Override
-	public void create(String type, String id, DataGroup dataRecord, List<StorageTerm> storageTerms,
-			List<Link> links, String dataDivider) {
+	public void create(String type, String id, DataGroup dataRecord, Set<StorageTerm> storageTerms,
+			Set<Link> links, String dataDivider) {
 		try (TableFacade tableFacade = sqlDatabaseFactory.factorTableFacade()) {
 			tryToCreate(type, id, dataRecord, storageTerms, links, dataDivider, tableFacade);
 		} catch (SqlConflictException e) {
@@ -134,7 +135,7 @@ public class DatabaseRecordStorage implements RecordStorage {
 	}
 
 	private void tryToCreate(String type, String id, DataGroup dataRecord,
-			List<StorageTerm> storageTerms, List<Link> links, String dataDivider,
+			Set<StorageTerm> storageTerms, Set<Link> links, String dataDivider,
 			TableFacade tableFacade) throws SQLException {
 		tableFacade.startTransaction();
 		createCreateQueryForRecordAndAddItToTableFacade(type, id, dataRecord, dataDivider,
@@ -153,7 +154,7 @@ public class DatabaseRecordStorage implements RecordStorage {
 	}
 
 	private void createCreateQueriesForStorageTermsAndAddThemToTableFacade(String type, String id,
-			List<StorageTerm> storageTerms, TableFacade tableFacade) {
+			Set<StorageTerm> storageTerms, TableFacade tableFacade) {
 		for (StorageTerm storageTerm : storageTerms) {
 			insertRowForStorageTerm(type, id, tableFacade, storageTerm);
 		}
@@ -176,7 +177,7 @@ public class DatabaseRecordStorage implements RecordStorage {
 	}
 
 	private void createCreateQueriesForLinksAndAddThemToTableFacade(String type, String id,
-			List<Link> links, TableFacade tableFacade) {
+			Set<Link> links, TableFacade tableFacade) {
 		for (Link link : links) {
 			insertRowForLink(type, id, tableFacade, link);
 		}
@@ -266,8 +267,8 @@ public class DatabaseRecordStorage implements RecordStorage {
 	}
 
 	@Override
-	public void update(String type, String id, DataGroup dataRecord, List<StorageTerm> storageTerms,
-			List<Link> links, String dataDivider) {
+	public void update(String type, String id, DataGroup dataRecord, Set<StorageTerm> storageTerms,
+			Set<Link> links, String dataDivider) {
 		int updatedRows = 0;
 		try (TableFacade tableFacade = sqlDatabaseFactory.factorTableFacade()) {
 			updatedRows = tryToUpdate(type, id, dataRecord, storageTerms, links, dataDivider,
@@ -279,7 +280,7 @@ public class DatabaseRecordStorage implements RecordStorage {
 	}
 
 	private int tryToUpdate(String type, String id, DataGroup dataRecord,
-			List<StorageTerm> storageTerms, List<Link> links, String dataDivider,
+			Set<StorageTerm> storageTerms, Set<Link> links, String dataDivider,
 			TableFacade tableFacade) throws SQLException {
 		tableFacade.startTransaction();
 		createDeleteQueryForStorageTermAndAddItToTableFacade(type, id, tableFacade);
@@ -413,7 +414,7 @@ public class DatabaseRecordStorage implements RecordStorage {
 	}
 
 	@Override
-	public Collection<Link> getLinksToRecord(String type, String id) {
+	public Set<Link> getLinksToRecord(String type, String id) {
 		try (TableFacade tableFacade = sqlDatabaseFactory.factorTableFacade()) {
 			return tryToGetLinksToRecord(type, id, tableFacade);
 		} catch (Exception e) {
@@ -422,8 +423,7 @@ public class DatabaseRecordStorage implements RecordStorage {
 		}
 	}
 
-	private Collection<Link> tryToGetLinksToRecord(String type, String id,
-			TableFacade tableFacade) {
+	private Set<Link> tryToGetLinksToRecord(String type, String id, TableFacade tableFacade) {
 		List<Row> readRowsForQuery = findLinksInStorage(tableFacade, type, id);
 		return transformRowsToLinks(readRowsForQuery);
 	}
@@ -435,8 +435,8 @@ public class DatabaseRecordStorage implements RecordStorage {
 		return tableFacade.readRowsForQuery(tableQuery);
 	}
 
-	private Collection<Link> transformRowsToLinks(List<Row> readRowsForQuery) {
-		List<Link> result = new ArrayList<>();
+	private Set<Link> transformRowsToLinks(List<Row> readRowsForQuery) {
+		Set<Link> result = new LinkedHashSet<>();
 		for (Row row : readRowsForQuery) {
 			String linkType = (String) row.getValueByColumn(FROMTYPE_COLUMN);
 			String linkId = (String) row.getValueByColumn(FROMID_COLUMN);
