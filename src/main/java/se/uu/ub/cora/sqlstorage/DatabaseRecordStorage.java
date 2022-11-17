@@ -83,7 +83,7 @@ public class DatabaseRecordStorage implements RecordStorage {
 	}
 
 	@Override
-	public DataGroup read(List<String> types, String id) {
+	public synchronized DataGroup read(List<String> types, String id) {
 		try (TableFacade tableFacade = sqlDatabaseFactory.factorTableFacade()) {
 			return readAndConvertData(types, id, tableFacade);
 		} catch (SqlNotFoundException e) {

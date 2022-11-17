@@ -37,7 +37,7 @@ public class DatabaseStorageInstanceProvider implements RecordStorageInstancePro
 
 	@Override
 	public int getOrderToSelectImplementionsBy() {
-		return -10;
+		return 1000;
 	}
 
 	@Override
