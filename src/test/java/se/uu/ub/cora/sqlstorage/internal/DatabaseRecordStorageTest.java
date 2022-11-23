@@ -16,7 +16,7 @@
  *     You should have received a copy of the GNU General Public License
  *     along with Cora.  If not, see <http://www.gnu.org/licenses/>.
  */
-package se.uu.ub.cora.sqlstorage;
+package se.uu.ub.cora.sqlstorage.internal;
 
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
@@ -49,9 +49,12 @@ import se.uu.ub.cora.sqlstorage.spy.sql.RowSpy;
 import se.uu.ub.cora.sqlstorage.spy.sql.SqlDatabaseFactorySpy;
 import se.uu.ub.cora.sqlstorage.spy.sql.TableFacadeSpy;
 import se.uu.ub.cora.sqlstorage.spy.sql.TableQuerySpy;
+import se.uu.ub.cora.storage.Condition;
 import se.uu.ub.cora.storage.Filter;
+import se.uu.ub.cora.storage.Part;
 import se.uu.ub.cora.storage.RecordConflictException;
 import se.uu.ub.cora.storage.RecordNotFoundException;
+import se.uu.ub.cora.storage.RelationalOperator;
 import se.uu.ub.cora.storage.StorageException;
 import se.uu.ub.cora.storage.StorageReadResult;
 
@@ -332,6 +335,28 @@ public class DatabaseRecordStorageTest {
 		assertEquals(result.totalNumberOfMatches, 747);
 		tableQuerySpy.MCR.assertParameters("setToNo", 0, 3L);
 		tableQuerySpy.MCR.assertParameter("addOrderByDesc", 0, "column", "id");
+	}
+
+	@Test
+	public void testReadListWithFilterHasOneIncludePartAndSeveralConditions() throws Exception {
+		Condition condition = new Condition("someKey", RelationalOperator.EQUAL_TO, "someValue");
+		Condition condition2 = new Condition("someKey2", RelationalOperator.EQUAL_TO, "someValue2");
+
+		Part part = new Part();
+		part.conditions.add(condition);
+		part.conditions.add(condition2);
+
+		Filter filterWithIncludePart = new Filter();
+		filterWithIncludePart.include.add(part);
+
+		storage.readList(LIST_WITH_ONE_TYPE, filterWithIncludePart);
+
+		TableQuerySpy tableQuerySpy = getFactoredTableQueryUsingCallNumber(0);
+
+		tableQuerySpy.MCR.assertNumberOfCallsToMethod("addCondition", 3);
+		tableQuerySpy.MCR.assertParameters("addCondition", 1, "someKey", "someValue");
+		tableQuerySpy.MCR.assertParameters("addCondition", 2, "someKey2", "someValue2");
+
 	}
 
 	@Test

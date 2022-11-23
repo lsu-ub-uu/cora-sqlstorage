@@ -39,6 +39,7 @@ import se.uu.ub.cora.logger.LoggerProvider;
 import se.uu.ub.cora.logger.spies.LoggerFactorySpy;
 import se.uu.ub.cora.logger.spies.LoggerSpy;
 import se.uu.ub.cora.sqldatabase.SqlDatabaseFactoryImp;
+import se.uu.ub.cora.sqlstorage.internal.DatabaseRecordStorage;
 import se.uu.ub.cora.sqlstorage.internal.DatabaseStorageInstance;
 import se.uu.ub.cora.storage.RecordStorage;
 

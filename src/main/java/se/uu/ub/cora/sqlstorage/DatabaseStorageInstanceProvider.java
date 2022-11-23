@@ -25,6 +25,7 @@ import se.uu.ub.cora.logger.Logger;
 import se.uu.ub.cora.logger.LoggerProvider;
 import se.uu.ub.cora.sqldatabase.SqlDatabaseFactory;
 import se.uu.ub.cora.sqldatabase.SqlDatabaseFactoryImp;
+import se.uu.ub.cora.sqlstorage.internal.DatabaseRecordStorage;
 import se.uu.ub.cora.sqlstorage.internal.DatabaseStorageInstance;
 import se.uu.ub.cora.storage.RecordStorage;
 import se.uu.ub.cora.storage.RecordStorageInstanceProvider;

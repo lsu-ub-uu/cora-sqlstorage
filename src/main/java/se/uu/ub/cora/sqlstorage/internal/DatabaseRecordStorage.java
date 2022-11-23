@@ -16,7 +16,7 @@
  *     You should have received a copy of the GNU General Public License
  *     along with Cora.  If not, see <http://www.gnu.org/licenses/>.
  */
-package se.uu.ub.cora.sqlstorage;
+package se.uu.ub.cora.sqlstorage.internal;
 
 import java.sql.SQLException;
 import java.text.MessageFormat;
@@ -45,7 +45,9 @@ import se.uu.ub.cora.sqldatabase.SqlDatabaseFactory;
 import se.uu.ub.cora.sqldatabase.SqlNotFoundException;
 import se.uu.ub.cora.sqldatabase.table.TableFacade;
 import se.uu.ub.cora.sqldatabase.table.TableQuery;
+import se.uu.ub.cora.storage.Condition;
 import se.uu.ub.cora.storage.Filter;
+import se.uu.ub.cora.storage.Part;
 import se.uu.ub.cora.storage.RecordConflictException;
 import se.uu.ub.cora.storage.RecordNotFoundException;
 import se.uu.ub.cora.storage.RecordStorage;
@@ -83,7 +85,7 @@ public class DatabaseRecordStorage implements RecordStorage {
 	}
 
 	@Override
-	public synchronized DataGroup read(List<String> types, String id) {
+	public DataGroup read(List<String> types, String id) {
 		try (TableFacade tableFacade = sqlDatabaseFactory.factorTableFacade()) {
 			return readAndConvertData(types, id, tableFacade);
 		} catch (SqlNotFoundException e) {
@@ -365,6 +367,7 @@ public class DatabaseRecordStorage implements RecordStorage {
 		tableQuery.addCondition(TYPE_COLUMN, types);
 		possiblySetFromNoInQueryFromFilter(tableQuery, filter);
 		possiblySetToNoInQueryFromFilter(tableQuery, filter);
+		possiblyAddConditionsForIncludeParts(filter, tableQuery);
 		tableQuery.addOrderByDesc("id");
 		return tableQuery;
 	}
@@ -378,6 +381,19 @@ public class DatabaseRecordStorage implements RecordStorage {
 	private void possiblySetToNoInQueryFromFilter(TableQuery tableQuery, Filter filter) {
 		if (!filter.toNoIsDefault()) {
 			tableQuery.setToNo(filter.toNo);
+		}
+	}
+
+	private void possiblyAddConditionsForIncludeParts(Filter filter, TableQuery tableQuery) {
+		if (filter.hasIncludeParts()) {
+			addConditionsForIncludeParts(filter, tableQuery);
+		}
+	}
+
+	private void addConditionsForIncludeParts(Filter filter, TableQuery tableQuery) {
+		Part part0 = filter.include.get(0);
+		for (Condition condition : part0.conditions) {
+			tableQuery.addCondition(condition.key(), condition.value());
 		}
 	}
 
