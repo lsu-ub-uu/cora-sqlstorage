@@ -16,7 +16,7 @@
  *     You should have received a copy of the GNU General Public License
  *     along with Cora.  If not, see <http://www.gnu.org/licenses/>.
  */
-package se.uu.ub.cora.sqlstorage;
+package se.uu.ub.cora.sqlstorage.internal;
 
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
@@ -49,9 +49,12 @@ import se.uu.ub.cora.sqlstorage.spy.sql.RowSpy;
 import se.uu.ub.cora.sqlstorage.spy.sql.SqlDatabaseFactorySpy;
 import se.uu.ub.cora.sqlstorage.spy.sql.TableFacadeSpy;
 import se.uu.ub.cora.sqlstorage.spy.sql.TableQuerySpy;
+import se.uu.ub.cora.storage.Condition;
 import se.uu.ub.cora.storage.Filter;
+import se.uu.ub.cora.storage.Part;
 import se.uu.ub.cora.storage.RecordConflictException;
 import se.uu.ub.cora.storage.RecordNotFoundException;
+import se.uu.ub.cora.storage.RelationalOperator;
 import se.uu.ub.cora.storage.StorageException;
 import se.uu.ub.cora.storage.StorageReadResult;
 
@@ -197,7 +200,7 @@ public class DatabaseRecordStorageTest {
 	public void testReadListTableQueryFactoredAndTableFacadeCalled() throws Exception {
 		storage.readList(LIST_WITH_ONE_TYPE, filter);
 
-		sqlDatabaseFactorySpy.MCR.assertParameters("factorTableQuery", 0, "record");
+		sqlDatabaseFactorySpy.MCR.assertParameters("factorTableQuery", 0, "recordstorageterm");
 		TableQuerySpy tableQuerySpy = getFactoredTableQueryUsingCallNumber(0);
 
 		TableFacadeSpy tableFacadeSpy = getFirstFactoredTableFacadeSpy();
@@ -335,6 +338,50 @@ public class DatabaseRecordStorageTest {
 	}
 
 	@Test
+	public void testReadListWithFilterHasOneIncludePartAndOneCondition() throws Exception {
+		Filter filterWithIncludePart = createFilterWithOneIncludePartAndOneCondition();
+
+		StorageReadResult result = storage.readList(LIST_WITH_ONE_TYPE, filterWithIncludePart);
+
+		sqlDatabaseFactorySpy.MCR.assertParameters("factorTableQuery", 0, "recordstorageterm");
+
+		TableQuerySpy tableQuerySpy = getFactoredTableQueryUsingCallNumber(0);
+		TableFacadeSpy tableFacadeSpy = getFirstFactoredTableFacadeSpy();
+		tableFacadeSpy.MCR.assertParameters("readRowsForQuery", 0, tableQuerySpy);
+		tableQuerySpy.MCR.assertParameters("addCondition", 0, "type", LIST_WITH_ONE_TYPE);
+		tableQuerySpy.MCR.assertParameters("addCondition", 1, "storageKey", "someKey");
+		tableQuerySpy.MCR.assertParameters("addCondition", 2, "value", "someValue");
+		tableQuerySpy.MCR.assertParameter("addOrderByDesc", 0, "column", "id");
+		tableQuerySpy.MCR.assertNumberOfCallsToMethod("addCondition", 3);
+
+		assertTotalNumberOfRowsWithFilter(result.totalNumberOfMatches, tableFacadeSpy, 1);
+	}
+
+	private Filter createFilterWithOneIncludePartAndOneCondition() {
+		Condition condition = new Condition("someKey", RelationalOperator.EQUAL_TO, "someValue");
+
+		Part part = new Part();
+		part.conditions.add(condition);
+
+		Filter filterWithIncludePart = new Filter();
+		filterWithIncludePart.include.add(part);
+		return filterWithIncludePart;
+	}
+
+	private void assertTotalNumberOfRowsWithFilter(long totalNumberOfMatches,
+			TableFacadeSpy tableFacadeSpy, int factorTableQueryCallNum) {
+		sqlDatabaseFactorySpy.MCR.assertParameters("factorTableQuery", factorTableQueryCallNum,
+				"recordstorageterm");
+		TableQuerySpy tableQueryNumberOfRows = (TableQuerySpy) sqlDatabaseFactorySpy.MCR
+				.getReturnValue("factorTableQuery", factorTableQueryCallNum);
+		tableQueryNumberOfRows.MCR.assertParameters("addCondition", 0, "type", LIST_WITH_ONE_TYPE);
+		tableQueryNumberOfRows.MCR.assertParameters("addCondition", 1, "storageKey", "someKey");
+		tableQueryNumberOfRows.MCR.assertParameters("addCondition", 2, "value", "someValue");
+		tableFacadeSpy.MCR.assertParameters("readNumberOfRows", 0, tableQueryNumberOfRows);
+		tableFacadeSpy.MCR.assertReturn("readNumberOfRows", 0, totalNumberOfMatches);
+	}
+
+	@Test
 	public void testGetTotalNumberOfRecordsForTypeTableFacadeFactoredAndCloseCalled()
 			throws Exception {
 		storage.getTotalNumberOfRecordsForTypes(LIST_OF_TYPES, filter);
@@ -370,11 +417,25 @@ public class DatabaseRecordStorageTest {
 		TableQuerySpy tableQuerySpy = getFactoredTableQueryUsingCallNumber(0);
 		TableFacadeSpy tableFacadeSpy = getFirstFactoredTableFacadeSpy();
 
-		sqlDatabaseFactorySpy.MCR.assertParameter("factorTableQuery", 0, "tableName", "record");
+		sqlDatabaseFactorySpy.MCR.assertParameter("factorTableQuery", 0, "tableName",
+				"recordstorageterm");
 
 		tableFacadeSpy.MCR.assertParameters("readNumberOfRows", 0, tableQuerySpy);
 		tableFacadeSpy.MCR.assertReturn("readNumberOfRows", 0, count);
 		assertEquals(count, 747);
+	}
+
+	@Test
+	public void testGetTotalNumberOfRowsForTypesWithFilter() throws Exception {
+		Filter filterWithIncludePart = createFilterWithOneIncludePartAndOneCondition();
+
+		long count = storage.getTotalNumberOfRecordsForTypes(LIST_WITH_ONE_TYPE,
+				filterWithIncludePart);
+
+		TableFacadeSpy tableFacadeSpy = getFirstFactoredTableFacadeSpy();
+
+		assertTotalNumberOfRowsWithFilter(count, tableFacadeSpy, 0);
+
 	}
 
 	@Test
