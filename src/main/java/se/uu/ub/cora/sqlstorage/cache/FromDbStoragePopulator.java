@@ -16,7 +16,7 @@
  *     You should have received a copy of the GNU General Public License
  *     along with Cora.  If not, see <http://www.gnu.org/licenses/>.
  */
-package se.uu.ub.cora.sqlstorage.memory;
+package se.uu.ub.cora.sqlstorage.cache;
 
 import java.util.Collections;
 import java.util.HashMap;
@@ -36,71 +36,79 @@ import se.uu.ub.cora.sqldatabase.DatabaseFacade;
 import se.uu.ub.cora.sqldatabase.Row;
 import se.uu.ub.cora.storage.RecordStorage;
 
-public class DatabaseCashFromDbPopulator {
+public class FromDbStoragePopulator {
 
+	private static final List<Object> EMPTY_LIST = Collections.emptyList();
 	private DatabaseFacade dbFacade;
 	private JsonParser jsonParser;
 	private RecordStorage recordStorageInMemory;
 	private InternalHolder internalHolder;
 
-	public DatabaseCashFromDbPopulator(RecordStorage recordStorageInMemory, DatabaseFacade dbFacade,
-			JsonParser jsonParser) {
-		this.recordStorageInMemory = recordStorageInMemory;
+	public FromDbStoragePopulator(DatabaseFacade dbFacade, JsonParser jsonParser) {
 		this.dbFacade = dbFacade;
 		this.jsonParser = jsonParser;
 		internalHolder = new InternalHolder();
 	}
 
-	public RecordStorage createInMemoryFromDatabase() {
-
+	public void populateStorageFromDatabase(RecordStorage recordStorageInMemory) {
+		this.recordStorageInMemory = recordStorageInMemory;
 		readAllStorageTermsAndSaveIntoInternalHolder();
 		readAllLinksAndSaveIntoInternalHolder();
 		readAllRecordsAndPopulateStorageInMemory();
-
-		return recordStorageInMemory;
 	}
 
 	private void readAllStorageTermsAndSaveIntoInternalHolder() {
 		List<Row> storageTermRows = dbFacade.readUsingSqlAndValues("select * from storageterm",
-				Collections.emptyList());
-
+				EMPTY_LIST);
 		for (Row row : storageTermRows) {
-			String recordtype = getColumnFromRow(row, "recordtype");
-			String recordid = (String) row.getValueByColumn("recordid");
-			String storageTermId = (String) row.getValueByColumn("storagetermid");
-			String value = (String) row.getValueByColumn("value");
-			String storageKey = (String) row.getValueByColumn("storagekey");
-			internalHolder.addStorageTerm(recordtype, recordid, storageTermId, storageKey, value);
+			addStorageTermToInternalHolder(row);
 		}
+	}
+
+	private void addStorageTermToInternalHolder(Row row) {
+		String recordtype = getColumnFromRow(row, "recordtype");
+		String recordid = getColumnFromRow(row, "recordid");
+		String storageTermId = getColumnFromRow(row, "storagetermid");
+		String value = getColumnFromRow(row, "value");
+		String storageKey = getColumnFromRow(row, "storagekey");
+		internalHolder.addStorageTerm(recordtype, recordid, storageTermId, storageKey, value);
+	}
+
+	private String getColumnFromRow(Row row, String columnName) {
+		return (String) row.getValueByColumn(columnName);
 	}
 
 	private void readAllLinksAndSaveIntoInternalHolder() {
-		List<Row> linksRows = dbFacade.readUsingSqlAndValues("select * from links",
-				Collections.emptyList());
-
+		List<Row> linksRows = dbFacade.readUsingSqlAndValues("select * from link", EMPTY_LIST);
 		for (Row row : linksRows) {
-			String fromtype = getColumnFromRow(row, "fromtype");
-			String fromid = (String) row.getValueByColumn("fromid");
-			String totype = (String) row.getValueByColumn("totype");
-			String toid = (String) row.getValueByColumn("toid");
-			internalHolder.addLink(fromtype, fromid, totype, toid);
+			addLinkToInternalHolder(row);
 		}
 	}
 
+	private void addLinkToInternalHolder(Row row) {
+		String fromtype = getColumnFromRow(row, "fromtype");
+		String fromid = getColumnFromRow(row, "fromid");
+		String totype = getColumnFromRow(row, "totype");
+		String toid = getColumnFromRow(row, "toid");
+		internalHolder.addLink(fromtype, fromid, totype, toid);
+	}
+
 	private void readAllRecordsAndPopulateStorageInMemory() {
-		List<Row> dataRows = dbFacade.readUsingSqlAndValues("select * from record",
-				Collections.emptyList());
-
+		List<Row> dataRows = dbFacade.readUsingSqlAndValues("select * from record", EMPTY_LIST);
 		for (Row row : dataRows) {
-			String type = (String) row.getValueByColumn("type");
-			String id = (String) row.getValueByColumn("id");
-			String data = (String) row.getValueByColumn("data");
-			String dataDivider = (String) row.getValueByColumn("datadivider");
-
-			DataGroup dataRecordGroup = convertJsonToDataGroup(data);
-
-			populateStorageInMemory(type, id, dataDivider, dataRecordGroup);
+			createRecordInMemoryStorage(row);
 		}
+	}
+
+	private void createRecordInMemoryStorage(Row row) {
+		String type = getColumnFromRow(row, "type");
+		String id = getColumnFromRow(row, "id");
+		String data = getColumnFromRow(row, "data");
+		String dataDivider = getColumnFromRow(row, "datadivider");
+
+		DataGroup dataRecordGroup = convertJsonToDataGroup(data);
+
+		populateStorageInMemory(type, id, dataDivider, dataRecordGroup);
 	}
 
 	private void populateStorageInMemory(String type, String id, String dataDivider,
@@ -114,12 +122,7 @@ public class DatabaseCashFromDbPopulator {
 		JsonValue jsonValue = jsonParser.parseString(data);
 		JsonToDataConverter jsonToDataConverter = JsonToDataConverterProvider
 				.getConverterUsingJsonObject(jsonValue);
-		DataGroup dataRecordGroup = (DataGroup) jsonToDataConverter.toInstance();
-		return dataRecordGroup;
-	}
-
-	private String getColumnFromRow(Row row, String columnName) {
-		return (String) row.getValueByColumn(columnName);
+		return (DataGroup) jsonToDataConverter.toInstance();
 	}
 
 	private class InternalHolder {
@@ -129,27 +132,14 @@ public class DatabaseCashFromDbPopulator {
 		public void addStorageTerm(String type, String id, String storageTermId, String storageKey,
 				String value) {
 			String combined = combine(type, id);
-
-			if (storageTerms.containsKey(combined)) {
-				storageTerms.get(combined).add(new StorageTerm(storageTermId, storageKey, value));
-			} else {
-				Set<StorageTerm> set = new LinkedHashSet<>();
-				set.add(new StorageTerm(storageTermId, storageKey, value));
-
-				storageTerms.put(combined, set);
-			}
+			StorageTerm storageTerm = new StorageTerm(storageTermId, storageKey, value);
+			storageTerms.computeIfAbsent(combined, k -> new LinkedHashSet<>()).add(storageTerm);
 		}
 
 		public void addLink(String fromType, String fromId, String toType, String toId) {
 			String combined = combine(fromType, fromId);
-
-			if (links.containsKey(combined)) {
-				links.get(combined).add(new Link(toType, toId));
-			} else {
-				Set<Link> set = new LinkedHashSet<>();
-				set.add(new Link(toType, toId));
-				links.put(combined, set);
-			}
+			Link link = new Link(toType, toId);
+			links.computeIfAbsent(combined, k -> new LinkedHashSet<Link>()).add(link);
 		}
 
 		private String combine(String type, String id) {
@@ -157,11 +147,15 @@ public class DatabaseCashFromDbPopulator {
 		}
 
 		public Set<StorageTerm> getStorageTemSet(String type, String id) {
-			return storageTerms.get(combine(type, id));
+			//Not tested
+			// return storageTerms.get(combine(type, id));
+			return storageTerms.getOrD efault(combine(type, id), new LinkedHashSet<>());
 		}
 
 		public Set<Link> getLinkSet(String type, String id) {
-			return links.get(combine(type, id));
+			//Not tested
+			// return links.get(combine(type, id));
+			return links.getOrDe fault(combine(type, id), new LinkedHashSet<>());
 		}
 
 	}

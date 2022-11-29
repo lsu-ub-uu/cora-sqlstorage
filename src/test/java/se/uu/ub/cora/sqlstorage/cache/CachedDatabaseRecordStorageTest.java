@@ -16,7 +16,7 @@
  *     You should have received a copy of the GNU General Public License
  *     along with Cora.  If not, see <http://www.gnu.org/licenses/>.
  */
-package se.uu.ub.cora.sqlstorage.memory;
+package se.uu.ub.cora.sqlstorage.cache;
 
 import java.util.List;
 import java.util.Set;
@@ -33,7 +33,7 @@ import se.uu.ub.cora.storage.RecordStorage;
 import se.uu.ub.cora.storage.StorageReadResult;
 import se.uu.ub.cora.storage.spies.RecordStorageSpy;
 
-public class DatabaseCacheTest {
+public class CachedDatabaseRecordStorageTest {
 
 	private RecordStorageSpy database;
 	private RecordStorageSpy memory;
@@ -51,7 +51,7 @@ public class DatabaseCacheTest {
 	public void beforeMethod() {
 		database = new RecordStorageSpy();
 		memory = new RecordStorageSpy();
-		db = DatabaseCache.usingDatabaseAndMemory(database, memory);
+		db = CachedDatabaseRecordStorage.usingDatabaseAndMemory(database, memory);
 
 		types = List.of("someType");
 	}
@@ -141,7 +141,7 @@ public class DatabaseCacheTest {
 	public void testGetTotalNumberOfRecordsForTypeSentToMemory() throws Exception {
 		long result = db.getTotalNumberOfRecordsForTypes(types, filter);
 
-		memory.MCR.assertParameters("getTotalNumberOfRecordsForTypes", 0, type, filter);
+		memory.MCR.assertParameters("getTotalNumberOfRecordsForTypes", 0, types, filter);
 		memory.MCR.assertReturn("getTotalNumberOfRecordsForTypes", 0, result);
 
 		database.MCR.assertMethodNotCalled("getTotalNumberOfRecordsForTypes");

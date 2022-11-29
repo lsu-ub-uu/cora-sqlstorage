@@ -16,7 +16,7 @@
  *     You should have received a copy of the GNU General Public License
  *     along with Cora.  If not, see <http://www.gnu.org/licenses/>.
  */
-package se.uu.ub.cora.sqlstorage.memory;
+package se.uu.ub.cora.sqlstorage.cache;
 
 import java.util.List;
 import java.util.Set;
@@ -28,17 +28,17 @@ import se.uu.ub.cora.storage.Filter;
 import se.uu.ub.cora.storage.RecordStorage;
 import se.uu.ub.cora.storage.StorageReadResult;
 
-public class DatabaseCache implements RecordStorage {
+public class CachedDatabaseRecordStorage implements RecordStorage {
 
 	private RecordStorage database;
 	private RecordStorage memory;
 
-	public static DatabaseCache usingDatabaseAndMemory(RecordStorage database,
+	public static CachedDatabaseRecordStorage usingDatabaseAndMemory(RecordStorage database,
 			RecordStorage memory) {
-		return new DatabaseCache(database, memory);
+		return new CachedDatabaseRecordStorage(database, memory);
 	}
 
-	private DatabaseCache(RecordStorage database, RecordStorage memory) {
+	private CachedDatabaseRecordStorage(RecordStorage database, RecordStorage memory) {
 		this.database = database;
 		this.memory = memory;
 	}
@@ -51,23 +51,23 @@ public class DatabaseCache implements RecordStorage {
 	@Override
 	public void create(String type, String id, DataGroup dataRecord, Set<StorageTerm> storageTerms,
 			Set<Link> links, String dataDivider) {
-		memory.create(type, id, dataRecord, storageTerms, links, dataDivider);
 		database.create(type, id, dataRecord, storageTerms, links, dataDivider);
+		memory.create(type, id, dataRecord, storageTerms, links, dataDivider);
 
 	}
 
 	@Override
 	public void deleteByTypeAndId(String type, String id) {
-		memory.deleteByTypeAndId(type, id);
 		database.deleteByTypeAndId(type, id);
+		memory.deleteByTypeAndId(type, id);
 
 	}
 
 	@Override
 	public void update(String type, String id, DataGroup dataRecord, Set<StorageTerm> storageTerms,
 			Set<Link> links, String dataDivider) {
-		memory.update(type, id, dataRecord, storageTerms, links, dataDivider);
 		database.update(type, id, dataRecord, storageTerms, links, dataDivider);
+		memory.update(type, id, dataRecord, storageTerms, links, dataDivider);
 
 	}
 
@@ -94,6 +94,10 @@ public class DatabaseCache implements RecordStorage {
 	@Override
 	public long getTotalNumberOfRecordsForTypes(List<String> types, Filter filter) {
 		return memory.getTotalNumberOfRecordsForTypes(types, filter);
+	}
+
+	RecordStorage onlyForTestGetDatabase() {
+		return database;
 	}
 
 }

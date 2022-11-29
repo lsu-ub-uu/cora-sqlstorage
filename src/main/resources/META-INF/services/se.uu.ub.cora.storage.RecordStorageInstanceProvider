@@ -1,1 +1,2 @@
-se.uu.ub.cora.sqlstorage.DatabaseStorageInstanceProvider
+#se.uu.ub.cora.sqlstorage.DatabaseStorageInstanceProvider
+se.uu.ub.cora.sqlstorage.cache.CachedDatabaseStorageInstanceProvider

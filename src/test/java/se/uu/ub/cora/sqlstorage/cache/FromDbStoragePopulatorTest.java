@@ -16,9 +16,7 @@
  *     You should have received a copy of the GNU General Public License
  *     along with Cora.  If not, see <http://www.gnu.org/licenses/>.
  */
-package se.uu.ub.cora.sqlstorage.memory;
-
-import static org.testng.Assert.assertSame;
+package se.uu.ub.cora.sqlstorage.cache;
 
 import java.util.Collections;
 import java.util.LinkedHashSet;
@@ -36,11 +34,10 @@ import se.uu.ub.cora.sqlstorage.spy.json.JsonParserSpy;
 import se.uu.ub.cora.sqlstorage.spy.json.JsonToDataConverterFactorySpy;
 import se.uu.ub.cora.sqlstorage.spy.json.JsonToDataConverterSpy;
 import se.uu.ub.cora.sqlstorage.spy.sql.RowSpy;
-import se.uu.ub.cora.storage.RecordStorage;
 import se.uu.ub.cora.storage.spies.RecordStorageSpy;
 
-public class DatabaseCashFromDbPopulatorTest {
-	private DatabaseCashFromDbPopulator populator;
+public class FromDbStoragePopulatorTest {
+	private FromDbStoragePopulator populator;
 	private JsonParserSpy jsonParserSpy;
 	private JsonToDataConverterFactorySpy factoryCreatorSpy;
 	private DatabaseFacadeSpy dbFacadeSpy;
@@ -57,21 +54,12 @@ public class DatabaseCashFromDbPopulatorTest {
 
 		callNo = 0;
 
-		populator = new DatabaseCashFromDbPopulator(recordStorageInMemory, dbFacadeSpy,
-				jsonParserSpy);
-
+		populator = new FromDbStoragePopulator(dbFacadeSpy, jsonParserSpy);
 	}
 
-	// @Test
-	// public void testCreateReturnsInMemoryStorage() throws Exception {
-	// RecordStorage storage = populator.createInMemoryFromDatabase();
-	// assertTrue(storage instanceof RecordStorageInMemory);
-	// assertNotNull(storage);
-	// }
-
 	@Test
-	public void testCreateReadsRecords() throws Exception {
-		populator.createInMemoryFromDatabase();
+	public void testPopulateReadsRecordsFromDb() throws Exception {
+		populator.populateStorageFromDatabase(recordStorageInMemory);
 
 		dbFacadeSpy.MCR.assertMethodWasCalled("readUsingSqlAndValues");
 		String sql = "select * from storageterm";
@@ -79,7 +67,7 @@ public class DatabaseCashFromDbPopulatorTest {
 		dbFacadeSpy.MCR.assertParameters("readUsingSqlAndValues", 0, sql, values);
 
 		dbFacadeSpy.MCR.assertMethodWasCalled("readUsingSqlAndValues");
-		String sqlLinks = "select * from links";
+		String sqlLinks = "select * from link";
 		List<Object> sqlValues = Collections.emptyList();
 		dbFacadeSpy.MCR.assertParameters("readUsingSqlAndValues", 1, sqlLinks, sqlValues);
 
@@ -89,12 +77,12 @@ public class DatabaseCashFromDbPopulatorTest {
 	}
 
 	@Test
-	public void testCreateConvertsRecords_twoRecords() throws Exception {
+	public void testPopulate_twoRecords() throws Exception {
 		RowSpy row1 = createRecords();
 		Set<Link> links1 = createLinks();
 		Set<StorageTerm> storageTermsRow1 = createStorageTerms();
 
-		RecordStorage recordStorageInMemoryFromReturn = populator.createInMemoryFromDatabase();
+		populator.populateStorageFromDatabase(recordStorageInMemory);
 
 		String typeRow1 = assertAndGetReturnForColumn(row1, "type");
 		String idRow1 = assertAndGetReturnForColumn(row1, "id");
@@ -118,9 +106,6 @@ public class DatabaseCashFromDbPopulatorTest {
 		recordStorageInMemory.MCR.assertParameter("create", 0, "dataDivider", dataDividerRow1);
 
 		recordStorageInMemory.MCR.assertNumberOfCallsToMethod("create", 2);
-
-		assertSame(recordStorageInMemoryFromReturn, recordStorageInMemory);
-
 	}
 
 	private RowSpy createRecords() {
@@ -146,7 +131,7 @@ public class DatabaseCashFromDbPopulatorTest {
 		links1.add(new Link("toType2", "toId2"));
 
 		dbFacadeSpy.MRV.setSpecificReturnValuesSupplier("readUsingSqlAndValues",
-				() -> List.of(storageTerm1, storageTerm2), "select * from links",
+				() -> List.of(storageTerm1, storageTerm2), "select * from link",
 				Collections.emptyList());
 		return links1;
 	}
