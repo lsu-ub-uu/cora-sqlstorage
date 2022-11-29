@@ -44,6 +44,7 @@
 		<logger.version>2.8.0</logger.version>
 		<loggerspies.version>1.3.0</loggerspies.version>
 		<testutils.version>1.9.0</testutils.version>
+		<basicstorage.version>7.4-SNAPSHOT</basicstorage.version>
 	</properties>
 
 	<scm>
@@ -96,6 +97,11 @@
 			<artifactId>logger</artifactId>
 			<version>${logger.version}</version>
 			<scope>provided</scope>
+		</dependency>
+		<dependency>
+			<groupId>se.uu.ub.cora</groupId>
+			<artifactId>basicstorage</artifactId>
+			<version>${basicstorage.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>se.uu.ub.cora</groupId>
