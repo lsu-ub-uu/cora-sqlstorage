@@ -31,6 +31,7 @@ import java.util.Map;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
+import se.uu.ub.cora.basicstorage.RecordStorageInMemory;
 import se.uu.ub.cora.initialize.InitializationException;
 import se.uu.ub.cora.initialize.SettingsProvider;
 import se.uu.ub.cora.json.parser.JsonParser;
@@ -38,23 +39,29 @@ import se.uu.ub.cora.json.parser.org.OrgJsonParser;
 import se.uu.ub.cora.logger.LoggerProvider;
 import se.uu.ub.cora.logger.spies.LoggerFactorySpy;
 import se.uu.ub.cora.logger.spies.LoggerSpy;
+import se.uu.ub.cora.sqldatabase.SqlDatabaseFactory;
 import se.uu.ub.cora.sqldatabase.SqlDatabaseFactoryImp;
 import se.uu.ub.cora.sqlstorage.DatabaseStorageInstanceProvider;
 import se.uu.ub.cora.sqlstorage.internal.DatabaseRecordStorage;
 import se.uu.ub.cora.sqlstorage.internal.DatabaseStorageInstance;
+import se.uu.ub.cora.sqlstorage.spy.json.JsonParserSpy;
+import se.uu.ub.cora.sqlstorage.spy.sql.SqlDatabaseFactorySpy;
 import se.uu.ub.cora.storage.RecordStorage;
+import se.uu.ub.cora.testutils.mcr.MethodCallRecorder;
 
 public class CachedDatabaseStorageProviderTest {
 	private Map<String, String> initInfo = new HashMap<>();
 	private LoggerFactorySpy loggerFactorySpy;
-	private CachedDatabaseStorageInstanceProvider provider;
+	private OnlyForTestCachedDatabaseStorageInstanceProvider provider;
+	private FromDbStoragePopulatorSpy populatorSpy;
 
 	@BeforeMethod
 	public void beforeMethod() {
 		setUpFactories();
 		DatabaseStorageInstance.setInstance(null);
 		setUpDefaultInitInfo();
-		provider = new CachedDatabaseStorageInstanceProvider();
+		provider = new OnlyForTestCachedDatabaseStorageInstanceProvider();
+		populatorSpy = new FromDbStoragePopulatorSpy();
 	}
 
 	private void setUpFactories() {
@@ -148,9 +155,61 @@ public class CachedDatabaseStorageProviderTest {
 	public void testOneStaticInstance() throws Exception {
 		CachedDatabaseRecordStorage recordStorage = (CachedDatabaseRecordStorage) provider
 				.getRecordStorage();
-		provider = new CachedDatabaseStorageInstanceProvider();
+		provider = new OnlyForTestCachedDatabaseStorageInstanceProvider();
 		CachedDatabaseRecordStorage recordStorage2 = (CachedDatabaseRecordStorage) provider
 				.getRecordStorage();
 		assertSame(recordStorage2, recordStorage);
+	}
+
+	@Test
+	public void testAssertParametersPassedToPopulator() throws Exception {
+		provider.getRecordStorage();
+
+		SqlDatabaseFactoryImp sqlDatabaseFactory = (SqlDatabaseFactoryImp) provider.MCR
+				.getValueForMethodNameAndCallNumberAndParameterName("createPopulater", 0,
+						"sqlDatabaseFactory");
+		String lookupName = sqlDatabaseFactory.onlyForTestGetLookupName();
+		assertEquals(lookupName, "java:/comp/env/jdbc/coraPostgres");
+
+		OrgJsonParser jsonParser = (OrgJsonParser) provider.MCR
+				.getValueForMethodNameAndCallNumberAndParameterName("createPopulater", 0,
+						"jsonParser");
+		assertTrue(jsonParser instanceof OrgJsonParser);
+
+		var memory = populatorSpy.MCR.getValueForMethodNameAndCallNumberAndParameterName(
+				"populateStorageFromDatabase", 0, "recordStorageInMemory");
+		assertTrue(memory instanceof RecordStorageInMemory);
+	}
+
+	@Test
+	public void testCreatePopulaterMethod() throws Exception {
+		SqlDatabaseFactorySpy sqlDatabaseFactory = new SqlDatabaseFactorySpy();
+		JsonParserSpy jsonParser = new JsonParserSpy();
+		FromDbStoragePopulatorImp populator = (FromDbStoragePopulatorImp) provider
+				.callSuperCreatePopulaterAndReturnResult(sqlDatabaseFactory, jsonParser);
+
+		assertSame(sqlDatabaseFactory.MCR.getReturnValue("factorDatabaseFacade", 0),
+				populator.onlyForTestGetDatabaseFacade());
+		assertSame(jsonParser, populator.onlyForTestGetJsonParser());
+	}
+
+	private class OnlyForTestCachedDatabaseStorageInstanceProvider
+			extends CachedDatabaseStorageInstanceProvider {
+
+		MethodCallRecorder MCR = new MethodCallRecorder();
+
+		@Override
+		protected FromDbStoragePopulator createPopulater(SqlDatabaseFactory sqlDatabaseFactory,
+				JsonParser jsonParser) {
+			MCR.addCall("sqlDatabaseFactory", sqlDatabaseFactory, "jsonParser", jsonParser);
+
+			return populatorSpy;
+		}
+
+		protected FromDbStoragePopulator callSuperCreatePopulaterAndReturnResult(
+				SqlDatabaseFactory sqlDatabaseFactory, JsonParser jsonParser) {
+			return super.createPopulater(sqlDatabaseFactory, jsonParser);
+		}
+
 	}
 }

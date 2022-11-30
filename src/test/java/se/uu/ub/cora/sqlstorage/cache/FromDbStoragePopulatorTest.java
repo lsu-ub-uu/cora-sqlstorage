@@ -54,7 +54,7 @@ public class FromDbStoragePopulatorTest {
 
 		callNo = 0;
 
-		populator = new FromDbStoragePopulator(dbFacadeSpy, jsonParserSpy);
+		populator = new FromDbStoragePopulatorImp(dbFacadeSpy, jsonParserSpy);
 	}
 
 	@Test
@@ -109,30 +109,27 @@ public class FromDbStoragePopulatorTest {
 	}
 
 	private RowSpy createRecords() {
-		RowSpy row1 = new RowSpy();
-		row1.MRV.setSpecificReturnValuesSupplier("getValueByColumn", () -> "type1", "type");
-		row1.MRV.setSpecificReturnValuesSupplier("getValueByColumn", () -> "id1", "id");
+		RowSpy record1 = new RowSpy();
+		record1.MRV.setSpecificReturnValuesSupplier("getValueByColumn", () -> "type1", "type");
+		record1.MRV.setSpecificReturnValuesSupplier("getValueByColumn", () -> "id1", "id");
 		RowSpy row2 = new RowSpy();
 		dbFacadeSpy.MRV.setSpecificReturnValuesSupplier("readUsingSqlAndValues",
-				() -> List.of(row1, row2), "select * from record", Collections.emptyList());
-		return row1;
+				() -> List.of(record1, row2), "select * from record", Collections.emptyList());
+		return record1;
 	}
 
 	private Set<Link> createLinks() {
-		RowSpy storageTerm1 = new RowSpy();
-		RowSpy storageTerm2 = new RowSpy();
-		storageTerm2.MRV.setSpecificReturnValuesSupplier("getValueByColumn", () -> "type1",
-				"fromtype");
-		storageTerm2.MRV.setSpecificReturnValuesSupplier("getValueByColumn", () -> "id1", "fromid");
-		storageTerm2.MRV.setSpecificReturnValuesSupplier("getValueByColumn", () -> "toType2",
-				"totype");
-		storageTerm2.MRV.setSpecificReturnValuesSupplier("getValueByColumn", () -> "toId2", "toid");
+		RowSpy link1 = new RowSpy();
+		RowSpy link2 = new RowSpy();
+		link2.MRV.setSpecificReturnValuesSupplier("getValueByColumn", () -> "type1", "fromtype");
+		link2.MRV.setSpecificReturnValuesSupplier("getValueByColumn", () -> "id1", "fromid");
+		link2.MRV.setSpecificReturnValuesSupplier("getValueByColumn", () -> "toType2", "totype");
+		link2.MRV.setSpecificReturnValuesSupplier("getValueByColumn", () -> "toId2", "toid");
 		Set<Link> links1 = new LinkedHashSet<>();
 		links1.add(new Link("toType2", "toId2"));
 
 		dbFacadeSpy.MRV.setSpecificReturnValuesSupplier("readUsingSqlAndValues",
-				() -> List.of(storageTerm1, storageTerm2), "select * from link",
-				Collections.emptyList());
+				() -> List.of(link1, link2), "select * from link", Collections.emptyList());
 		return links1;
 	}
 
@@ -164,4 +161,26 @@ public class FromDbStoragePopulatorTest {
 		callNo++;
 		return typeRow1;
 	}
+
+	@Test
+	public void testPopulate_noStorageTerms() throws Exception {
+		createRecords();
+		createLinks();
+
+		populator.populateStorageFromDatabase(recordStorageInMemory);
+
+		recordStorageInMemory.MCR.assertParameter("create", 1, "storageTerms",
+				Collections.emptySet());
+	}
+
+	@Test
+	public void testPopulate_noLinks() throws Exception {
+		createRecords();
+		createStorageTerms();
+
+		populator.populateStorageFromDatabase(recordStorageInMemory);
+
+		recordStorageInMemory.MCR.assertParameter("create", 1, "links", Collections.emptySet());
+	}
+
 }

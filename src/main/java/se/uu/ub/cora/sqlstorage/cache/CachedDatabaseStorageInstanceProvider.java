@@ -77,16 +77,28 @@ public class CachedDatabaseStorageInstanceProvider implements RecordStorageInsta
 	}
 
 	private void createDependenciesAndStartStorage() {
+		CachedDatabaseRecordStorage cachedDbStorage = startCachedDbStorage();
+		setStaticInstance(cachedDbStorage);
+	}
+
+	private CachedDatabaseRecordStorage startCachedDbStorage() {
 		SqlDatabaseFactory sqlDatabaseFactory = SqlDatabaseFactoryImp
 				.usingLookupNameFromContext(databaseLookupValue);
 		JsonParser jsonParser = new OrgJsonParser();
 		DatabaseRecordStorage database = new DatabaseRecordStorage(sqlDatabaseFactory, jsonParser);
 		RecordStorageInMemory memory = new RecordStorageInMemory();
-		// NOT tested
-		FromDbStorageP opulator populator = new FromDbStoragePopulator(
-				sqlDatabaseFactory.factorDatabaseFacade(), jsonParser);
+		return populateFromDatabase(sqlDatabaseFactory, jsonParser, database, memory);
+	}
+
+	private CachedDatabaseRecordStorage populateFromDatabase(SqlDatabaseFactory sqlDatabaseFactory,
+			JsonParser jsonParser, DatabaseRecordStorage database, RecordStorageInMemory memory) {
+		FromDbStoragePopulator populator = createPopulater(sqlDatabaseFactory, jsonParser);
 		populator.populateStorageFromDatabase(memory);
-		// end not tested
-		setStaticInstance(CachedDatabaseRecordStorage.usingDatabaseAndMemory(database, memory));
+		return CachedDatabaseRecordStorage.usingDatabaseAndMemory(database, memory);
+	}
+
+	protected FromDbStoragePopulator createPopulater(SqlDatabaseFactory sqlDatabaseFactory,
+			JsonParser jsonParser) {
+		return new FromDbStoragePopulatorImp(sqlDatabaseFactory.factorDatabaseFacade(), jsonParser);
 	}
 }
