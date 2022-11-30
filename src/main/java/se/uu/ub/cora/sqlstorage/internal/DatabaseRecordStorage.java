@@ -16,13 +16,14 @@
  *     You should have received a copy of the GNU General Public License
  *     along with Cora.  If not, see <http://www.gnu.org/licenses/>.
  */
-package se.uu.ub.cora.sqlstorage;
+package se.uu.ub.cora.sqlstorage.internal;
 
 import java.sql.SQLException;
 import java.text.MessageFormat;
 import java.util.ArrayList;
-import java.util.Collection;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 
 import org.postgresql.util.PGobject;
 
@@ -44,7 +45,9 @@ import se.uu.ub.cora.sqldatabase.SqlDatabaseFactory;
 import se.uu.ub.cora.sqldatabase.SqlNotFoundException;
 import se.uu.ub.cora.sqldatabase.table.TableFacade;
 import se.uu.ub.cora.sqldatabase.table.TableQuery;
+import se.uu.ub.cora.storage.Condition;
 import se.uu.ub.cora.storage.Filter;
+import se.uu.ub.cora.storage.Part;
 import se.uu.ub.cora.storage.RecordConflictException;
 import se.uu.ub.cora.storage.RecordNotFoundException;
 import se.uu.ub.cora.storage.RecordStorage;
@@ -62,6 +65,7 @@ import se.uu.ub.cora.storage.StorageReadResult;
  */
 public class DatabaseRecordStorage implements RecordStorage {
 	private static final String TABLE_RECORD = "record";
+	private static final String VIEW_RECORDSTORAGETERM = "recordstorageterm";
 	private static final String TABLE_LINK = "link";
 
 	private static final String FROMTYPE_COLUMN = "fromtype";
@@ -121,8 +125,8 @@ public class DatabaseRecordStorage implements RecordStorage {
 	}
 
 	@Override
-	public void create(String type, String id, DataGroup dataRecord, List<StorageTerm> storageTerms,
-			List<Link> links, String dataDivider) {
+	public void create(String type, String id, DataGroup dataRecord, Set<StorageTerm> storageTerms,
+			Set<Link> links, String dataDivider) {
 		try (TableFacade tableFacade = sqlDatabaseFactory.factorTableFacade()) {
 			tryToCreate(type, id, dataRecord, storageTerms, links, dataDivider, tableFacade);
 		} catch (SqlConflictException e) {
@@ -134,7 +138,7 @@ public class DatabaseRecordStorage implements RecordStorage {
 	}
 
 	private void tryToCreate(String type, String id, DataGroup dataRecord,
-			List<StorageTerm> storageTerms, List<Link> links, String dataDivider,
+			Set<StorageTerm> storageTerms, Set<Link> links, String dataDivider,
 			TableFacade tableFacade) throws SQLException {
 		tableFacade.startTransaction();
 		createCreateQueryForRecordAndAddItToTableFacade(type, id, dataRecord, dataDivider,
@@ -153,7 +157,7 @@ public class DatabaseRecordStorage implements RecordStorage {
 	}
 
 	private void createCreateQueriesForStorageTermsAndAddThemToTableFacade(String type, String id,
-			List<StorageTerm> storageTerms, TableFacade tableFacade) {
+			Set<StorageTerm> storageTerms, TableFacade tableFacade) {
 		for (StorageTerm storageTerm : storageTerms) {
 			insertRowForStorageTerm(type, id, tableFacade, storageTerm);
 		}
@@ -176,7 +180,7 @@ public class DatabaseRecordStorage implements RecordStorage {
 	}
 
 	private void createCreateQueriesForLinksAndAddThemToTableFacade(String type, String id,
-			List<Link> links, TableFacade tableFacade) {
+			Set<Link> links, TableFacade tableFacade) {
 		for (Link link : links) {
 			insertRowForLink(type, id, tableFacade, link);
 		}
@@ -266,8 +270,8 @@ public class DatabaseRecordStorage implements RecordStorage {
 	}
 
 	@Override
-	public void update(String type, String id, DataGroup dataRecord, List<StorageTerm> storageTerms,
-			List<Link> links, String dataDivider) {
+	public void update(String type, String id, DataGroup dataRecord, Set<StorageTerm> storageTerms,
+			Set<Link> links, String dataDivider) {
 		int updatedRows = 0;
 		try (TableFacade tableFacade = sqlDatabaseFactory.factorTableFacade()) {
 			updatedRows = tryToUpdate(type, id, dataRecord, storageTerms, links, dataDivider,
@@ -279,7 +283,7 @@ public class DatabaseRecordStorage implements RecordStorage {
 	}
 
 	private int tryToUpdate(String type, String id, DataGroup dataRecord,
-			List<StorageTerm> storageTerms, List<Link> links, String dataDivider,
+			Set<StorageTerm> storageTerms, Set<Link> links, String dataDivider,
 			TableFacade tableFacade) throws SQLException {
 		tableFacade.startTransaction();
 		createDeleteQueryForStorageTermAndAddItToTableFacade(type, id, tableFacade);
@@ -347,7 +351,7 @@ public class DatabaseRecordStorage implements RecordStorage {
 	private StorageReadResult readAndConvertDataList(List<String> types, TableFacade tableFacade,
 			Filter filter) {
 		List<Row> readRows = readRowsFromDatabase(types, tableFacade, filter);
-		long totalNumberOfMatches = readNumberOfRows(types, tableFacade);
+		long totalNumberOfMatches = readNumberOfRows(types, tableFacade, filter);
 		StorageReadResult readResult = convertRowsToListOfDataGroups(readRows);
 		readResult.totalNumberOfMatches = totalNumberOfMatches;
 		return readResult;
@@ -360,10 +364,11 @@ public class DatabaseRecordStorage implements RecordStorage {
 	}
 
 	private TableQuery assembleReadRowsQuery(List<String> types, Filter filter) {
-		TableQuery tableQuery = sqlDatabaseFactory.factorTableQuery(TABLE_RECORD);
+		TableQuery tableQuery = sqlDatabaseFactory.factorTableQuery(VIEW_RECORDSTORAGETERM);
 		tableQuery.addCondition(TYPE_COLUMN, types);
 		possiblySetFromNoInQueryFromFilter(tableQuery, filter);
 		possiblySetToNoInQueryFromFilter(tableQuery, filter);
+		possiblyAddConditionsForIncludeParts(filter, tableQuery);
 		tableQuery.addOrderByDesc("id");
 		return tableQuery;
 	}
@@ -377,6 +382,20 @@ public class DatabaseRecordStorage implements RecordStorage {
 	private void possiblySetToNoInQueryFromFilter(TableQuery tableQuery, Filter filter) {
 		if (!filter.toNoIsDefault()) {
 			tableQuery.setToNo(filter.toNo);
+		}
+	}
+
+	private void possiblyAddConditionsForIncludeParts(Filter filter, TableQuery tableQuery) {
+		if (filter.hasIncludeParts()) {
+			addConditionsForIncludeParts(filter, tableQuery);
+		}
+	}
+
+	private void addConditionsForIncludeParts(Filter filter, TableQuery tableQuery) {
+		Part part0 = filter.include.get(0);
+		for (Condition condition : part0.conditions) {
+			tableQuery.addCondition("storageKey", condition.key());
+			tableQuery.addCondition("value", condition.value());
 		}
 	}
 
@@ -413,7 +432,7 @@ public class DatabaseRecordStorage implements RecordStorage {
 	}
 
 	@Override
-	public Collection<Link> getLinksToRecord(String type, String id) {
+	public Set<Link> getLinksToRecord(String type, String id) {
 		try (TableFacade tableFacade = sqlDatabaseFactory.factorTableFacade()) {
 			return tryToGetLinksToRecord(type, id, tableFacade);
 		} catch (Exception e) {
@@ -422,8 +441,7 @@ public class DatabaseRecordStorage implements RecordStorage {
 		}
 	}
 
-	private Collection<Link> tryToGetLinksToRecord(String type, String id,
-			TableFacade tableFacade) {
+	private Set<Link> tryToGetLinksToRecord(String type, String id, TableFacade tableFacade) {
 		List<Row> readRowsForQuery = findLinksInStorage(tableFacade, type, id);
 		return transformRowsToLinks(readRowsForQuery);
 	}
@@ -435,8 +453,8 @@ public class DatabaseRecordStorage implements RecordStorage {
 		return tableFacade.readRowsForQuery(tableQuery);
 	}
 
-	private Collection<Link> transformRowsToLinks(List<Row> readRowsForQuery) {
-		List<Link> result = new ArrayList<>();
+	private Set<Link> transformRowsToLinks(List<Row> readRowsForQuery) {
+		Set<Link> result = new LinkedHashSet<>();
 		for (Row row : readRowsForQuery) {
 			String linkType = (String) row.getValueByColumn(FROMTYPE_COLUMN);
 			String linkId = (String) row.getValueByColumn(FROMID_COLUMN);
@@ -483,15 +501,17 @@ public class DatabaseRecordStorage implements RecordStorage {
 	@Override
 	public long getTotalNumberOfRecordsForTypes(List<String> types, Filter filter) {
 		try (TableFacade tableFacade = sqlDatabaseFactory.factorTableFacade()) {
-			return readNumberOfRows(types, tableFacade);
+			return readNumberOfRows(types, tableFacade, filter);
 		} catch (SqlDatabaseException e) {
 			throw createRecordNotFoundExceptionForType(types, e);
 		}
 	}
 
-	private long readNumberOfRows(List<String> types, TableFacade tableFacade) {
-		TableQuery tableQuery = sqlDatabaseFactory.factorTableQuery(TABLE_RECORD);
+	private long readNumberOfRows(List<String> types, TableFacade tableFacade, Filter filter) {
+		TableQuery tableQuery = sqlDatabaseFactory.factorTableQuery(VIEW_RECORDSTORAGETERM);
 		tableQuery.addCondition(TYPE_COLUMN, types);
+		possiblyAddConditionsForIncludeParts(filter, tableQuery);
+
 		return tableFacade.readNumberOfRows(tableQuery);
 	}
 

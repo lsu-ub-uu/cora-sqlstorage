@@ -77,8 +77,14 @@ public class TableFacadeSpy implements TableFacade {
 		List<Row> listResult = new ArrayList<>();
 		if (totalNumberOfRecordsForType > 0) {
 			RowSpy result = new RowSpy();
+			result.MRV.setDefaultReturnValuesSupplier("getValueByColumn",
+					() -> "some value from getValueByColumn in rowSpy1");
 			RowSpy result2 = new RowSpy();
+			result2.MRV.setDefaultReturnValuesSupplier("getValueByColumn",
+					() -> "some value from getValueByColumn in rowSpy2");
 			RowSpy result3 = new RowSpy();
+			result3.MRV.setDefaultReturnValuesSupplier("getValueByColumn",
+					() -> "some value from getValueByColumn in rowSpy3");
 			listResult.add(result);
 			listResult.add(result2);
 			listResult.add(result3);

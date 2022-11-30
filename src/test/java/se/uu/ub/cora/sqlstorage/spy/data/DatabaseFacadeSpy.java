@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 Uppsala University Library
+ * Copyright 2019 Uppsala University Library
  *
  * This file is part of Cora.
  *
@@ -16,46 +16,58 @@
  *     You should have received a copy of the GNU General Public License
  *     along with Cora.  If not, see <http://www.gnu.org/licenses/>.
  */
-package se.uu.ub.cora.sqlstorage.spy.sql;
+package se.uu.ub.cora.sqlstorage.spy.data;
 
-import java.util.Set;
+import java.util.Collections;
+import java.util.List;
 
+import se.uu.ub.cora.sqldatabase.DatabaseFacade;
 import se.uu.ub.cora.sqldatabase.Row;
 import se.uu.ub.cora.testutils.mcr.MethodCallRecorder;
 import se.uu.ub.cora.testutils.mrv.MethodReturnValues;
 
-public class RowSpy implements Row {
+public class DatabaseFacadeSpy implements DatabaseFacade {
 	public MethodCallRecorder MCR = new MethodCallRecorder();
 	public MethodReturnValues MRV = new MethodReturnValues();
 
-	public RowSpy() {
+	public DatabaseFacadeSpy() {
 		MCR.useMRV(MRV);
-
-		MRV.setDefaultReturnValuesSupplier("getValueByColumn",
-				() -> "some value from getValueByColumn in rowSpy");
+		MRV.setDefaultReturnValuesSupplier("readUsingSqlAndValues", () -> Collections.emptyList());
 	}
 
 	@Override
-	public Object getValueByColumn(String columnName) {
-		return MCR.addCallAndReturnFromMRV("columnName", columnName);
+	public List<Row> readUsingSqlAndValues(String sql, List<Object> values) {
+		return (List<Row>) MCR.addCallAndReturnFromMRV("sql", sql, "values", values);
 	}
 
 	@Override
-	public Set<String> columnSet() {
+	public Row readOneRowOrFailUsingSqlAndValues(String sql, List<Object> values) {
+		return (Row) MCR.addCallAndReturnFromMRV("sql", sql, "values", values);
+	}
+
+	@Override
+	public int executeSqlWithValues(String sql, List<Object> values) {
+		return (int) MCR.addCallAndReturnFromMRV("sql", sql, "values", values);
+	}
+
+	@Override
+	public void close() {
 		MCR.addCall();
-		return null;
 	}
 
 	@Override
-	public boolean hasColumn(String columnName) {
-		MCR.addCall("columnName", columnName);
-		return false;
+	public void startTransaction() {
+		MCR.addCall();
 	}
 
 	@Override
-	public boolean hasColumnWithNonEmptyValue(String columnName) {
-		MCR.addCall("columnName", columnName);
-		return false;
+	public void endTransaction() {
+		MCR.addCall();
+	}
+
+	@Override
+	public void rollback() {
+		MCR.addCall();
 	}
 
 }

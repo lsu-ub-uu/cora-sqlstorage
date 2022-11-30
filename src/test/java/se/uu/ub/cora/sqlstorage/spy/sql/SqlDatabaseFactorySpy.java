@@ -23,6 +23,7 @@ import se.uu.ub.cora.sqldatabase.DatabaseFacade;
 import se.uu.ub.cora.sqldatabase.SqlDatabaseFactory;
 import se.uu.ub.cora.sqldatabase.table.TableFacade;
 import se.uu.ub.cora.sqldatabase.table.TableQuery;
+import se.uu.ub.cora.sqlstorage.spy.data.DatabaseFacadeSpy;
 import se.uu.ub.cora.testutils.mcr.MethodCallRecorder;
 
 public class SqlDatabaseFactorySpy implements SqlDatabaseFactory {
@@ -40,8 +41,10 @@ public class SqlDatabaseFactorySpy implements SqlDatabaseFactory {
 
 	@Override
 	public DatabaseFacade factorDatabaseFacade() {
-		// TODO Auto-generated method stub
-		return null;
+		MCR.addCall();
+		DatabaseFacadeSpy dbSpy = new DatabaseFacadeSpy();
+		MCR.addReturned(dbSpy);
+		return (DatabaseFacade) dbSpy;
 	}
 
 	@Override

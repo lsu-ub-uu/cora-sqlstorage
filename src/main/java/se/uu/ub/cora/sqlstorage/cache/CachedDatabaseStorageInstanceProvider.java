@@ -16,8 +16,9 @@
  *     You should have received a copy of the GNU General Public License
  *     along with Cora.  If not, see <http://www.gnu.org/licenses/>.
  */
-package se.uu.ub.cora.sqlstorage;
+package se.uu.ub.cora.sqlstorage.cache;
 
+import se.uu.ub.cora.basicstorage.RecordStorageInMemory;
 import se.uu.ub.cora.initialize.SettingsProvider;
 import se.uu.ub.cora.json.parser.JsonParser;
 import se.uu.ub.cora.json.parser.org.OrgJsonParser;
@@ -30,15 +31,16 @@ import se.uu.ub.cora.sqlstorage.internal.DatabaseStorageInstance;
 import se.uu.ub.cora.storage.RecordStorage;
 import se.uu.ub.cora.storage.RecordStorageInstanceProvider;
 
-public class DatabaseStorageInstanceProvider implements RecordStorageInstanceProvider {
+public class CachedDatabaseStorageInstanceProvider implements RecordStorageInstanceProvider {
 
-	private Logger log = LoggerProvider.getLoggerForClass(DatabaseStorageInstanceProvider.class);
+	private Logger log = LoggerProvider
+			.getLoggerForClass(CachedDatabaseStorageInstanceProvider.class);
 	private static final String LOOKUP_NAME = "coraDatabaseLookupName";
 	private String databaseLookupValue;
 
 	@Override
 	public int getOrderToSelectImplementionsBy() {
-		return 0;
+		return 10;
 	}
 
 	@Override
@@ -47,7 +49,7 @@ public class DatabaseStorageInstanceProvider implements RecordStorageInstancePro
 		return DatabaseStorageInstance.getInstance();
 	}
 
-	static void setStaticInstance(DatabaseRecordStorage recordStorage) {
+	static void setStaticInstance(RecordStorage recordStorage) {
 		DatabaseStorageInstance.setInstance(recordStorage);
 	}
 
@@ -63,9 +65,10 @@ public class DatabaseStorageInstanceProvider implements RecordStorageInstancePro
 
 	private void logAndStartStorage() {
 		log.logInfoUsingMessage(
-				"DatabaseStorageInstanceProvider starting DatabaseRecordStorage...");
+				"CachedDatabaseStorageInstanceProvider starting DatabaseCachedRecordStorage...");
 		startStorage();
-		log.logInfoUsingMessage("DatabaseStorageInstanceProvider started DatabaseRecordStorage");
+		log.logInfoUsingMessage(
+				"CachedDatabaseStorageInstanceProvider started DatabaseCachedRecordStorage");
 	}
 
 	private void startStorage() {
@@ -74,9 +77,28 @@ public class DatabaseStorageInstanceProvider implements RecordStorageInstancePro
 	}
 
 	private void createDependenciesAndStartStorage() {
+		CachedDatabaseRecordStorage cachedDbStorage = startCachedDbStorage();
+		setStaticInstance(cachedDbStorage);
+	}
+
+	private CachedDatabaseRecordStorage startCachedDbStorage() {
 		SqlDatabaseFactory sqlDatabaseFactory = SqlDatabaseFactoryImp
 				.usingLookupNameFromContext(databaseLookupValue);
 		JsonParser jsonParser = new OrgJsonParser();
-		setStaticInstance(new DatabaseRecordStorage(sqlDatabaseFactory, jsonParser));
+		DatabaseRecordStorage database = new DatabaseRecordStorage(sqlDatabaseFactory, jsonParser);
+		RecordStorageInMemory memory = new RecordStorageInMemory();
+		return populateFromDatabase(sqlDatabaseFactory, jsonParser, database, memory);
+	}
+
+	private CachedDatabaseRecordStorage populateFromDatabase(SqlDatabaseFactory sqlDatabaseFactory,
+			JsonParser jsonParser, DatabaseRecordStorage database, RecordStorageInMemory memory) {
+		FromDbStoragePopulator populator = createPopulater(sqlDatabaseFactory, jsonParser);
+		populator.populateStorageFromDatabase(memory);
+		return CachedDatabaseRecordStorage.usingDatabaseAndMemory(database, memory);
+	}
+
+	protected FromDbStoragePopulator createPopulater(SqlDatabaseFactory sqlDatabaseFactory,
+			JsonParser jsonParser) {
+		return new FromDbStoragePopulatorImp(sqlDatabaseFactory.factorDatabaseFacade(), jsonParser);
 	}
 }
