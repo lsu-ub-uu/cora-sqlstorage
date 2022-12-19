@@ -72,6 +72,7 @@ public class CachedDatabaseStorageProviderTest {
 	private void setUpDefaultInitInfo() {
 		initInfo = new HashMap<>();
 		initInfo.put("coraDatabaseLookupName", "java:/comp/env/jdbc/coraPostgres");
+
 		SettingsProvider.setSettings(initInfo);
 	}
 
@@ -191,6 +192,28 @@ public class CachedDatabaseStorageProviderTest {
 		assertSame(sqlDatabaseFactory.MCR.getReturnValue("factorDatabaseFacade", 0),
 				populator.onlyForTestGetDatabaseFacade());
 		assertSame(jsonParser, populator.onlyForTestGetJsonParser());
+	}
+
+	@Test
+	public void testCreateNonCachedDbStorage() throws Exception {
+		initInfo.put("doNotCache", "true");
+
+		DatabaseRecordStorage database = (DatabaseRecordStorage) provider.getRecordStorage();
+
+		SqlDatabaseFactoryImp sqlDatabaseFactory = (SqlDatabaseFactoryImp) database
+				.onlyForTestGetSqlDatabaseFactory();
+		assertNotNull(sqlDatabaseFactory);
+		String lookupName = sqlDatabaseFactory.onlyForTestGetLookupName();
+		assertEquals(lookupName, "java:/comp/env/jdbc/coraPostgres");
+	}
+
+	@Test
+	public void testCreateCachedDbStorageWith_doNotCache_setting() throws Exception {
+		initInfo.put("doNotCache", "false");
+
+		RecordStorage storage = provider.getRecordStorage();
+
+		assertTrue(storage instanceof CachedDatabaseRecordStorage);
 	}
 
 	private class OnlyForTestCachedDatabaseStorageInstanceProvider

@@ -19,6 +19,7 @@
 package se.uu.ub.cora.sqlstorage.cache;
 
 import se.uu.ub.cora.basicstorage.RecordStorageInMemory;
+import se.uu.ub.cora.initialize.InitializationException;
 import se.uu.ub.cora.initialize.SettingsProvider;
 import se.uu.ub.cora.json.parser.JsonParser;
 import se.uu.ub.cora.json.parser.org.OrgJsonParser;
@@ -77,17 +78,29 @@ public class CachedDatabaseStorageInstanceProvider implements RecordStorageInsta
 	}
 
 	private void createDependenciesAndStartStorage() {
-		CachedDatabaseRecordStorage cachedDbStorage = startCachedDbStorage();
+		RecordStorage cachedDbStorage = startCachedDbStorage();
 		setStaticInstance(cachedDbStorage);
 	}
 
-	private CachedDatabaseRecordStorage startCachedDbStorage() {
+	private RecordStorage startCachedDbStorage() {
 		SqlDatabaseFactory sqlDatabaseFactory = SqlDatabaseFactoryImp
 				.usingLookupNameFromContext(databaseLookupValue);
 		JsonParser jsonParser = new OrgJsonParser();
 		DatabaseRecordStorage database = new DatabaseRecordStorage(sqlDatabaseFactory, jsonParser);
+		if (shouldNotCache()) {
+			return database;
+		}
 		RecordStorageInMemory memory = new RecordStorageInMemory();
 		return populateFromDatabase(sqlDatabaseFactory, jsonParser, database, memory);
+	}
+
+	private boolean shouldNotCache() {
+		try {
+			String setting = SettingsProvider.getSetting("doNotCache");
+			return "true".equals(setting);
+		} catch (InitializationException e) {
+			return false;
+		}
 	}
 
 	private CachedDatabaseRecordStorage populateFromDatabase(SqlDatabaseFactory sqlDatabaseFactory,
