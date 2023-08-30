@@ -90,7 +90,7 @@ public class DatabaseRecordStorage implements RecordStorage {
 		try (TableFacade tableFacade = sqlDatabaseFactory.factorTableFacade()) {
 			return readAndConvertData(types, id, tableFacade);
 		} catch (SqlNotFoundException e) {
-			throw new RecordNotFoundException(MessageFormat
+			throw RecordNotFoundException.withMessageAndException(MessageFormat
 					.format("No record found for recordType(s): {0}, with id: {1}.", types, id), e);
 		} catch (SqlDataException e) {
 			throw StorageException.withMessageAndException(MessageFormat.format(
@@ -308,7 +308,7 @@ public class DatabaseRecordStorage implements RecordStorage {
 	private void throwRecordNotFoundExceptionIfAffectedRowsIsZero(String type, String id,
 			int affectedRows, String storageAction) {
 		if (affectedRows == 0) {
-			throw new RecordNotFoundException(MessageFormat.format(
+			throw RecordNotFoundException.withMessage(MessageFormat.format(
 					"Record not found when {0} record with recordType: {1} and id: {2}.",
 					storageAction, type, id));
 		}
@@ -345,7 +345,7 @@ public class DatabaseRecordStorage implements RecordStorage {
 	private RecordNotFoundException createRecordNotFoundExceptionForType(List<String> types,
 			SqlDatabaseException e) {
 		String errMsg = MessageFormat.format("RecordType: {0} not found in storage.", types);
-		return new RecordNotFoundException(errMsg, e);
+		return RecordNotFoundException.withMessageAndException(errMsg, e);
 	}
 
 	private StorageReadResult readAndConvertDataList(List<String> types, TableFacade tableFacade,
@@ -494,7 +494,7 @@ public class DatabaseRecordStorage implements RecordStorage {
 
 	private RecordNotFoundException createRecordNotFoundExceptionForExists(List<String> type,
 			String id, SqlDatabaseException e) {
-		return new RecordNotFoundException(MessageFormat
+		return RecordNotFoundException.withMessageAndException(MessageFormat
 				.format("RecordType: {0} with id: {1}, not found in storage.", type, id), e);
 	}
 

@@ -35,7 +35,7 @@
 	<url>http://maven.apache.org</url>
 
 	<properties>
-		<storage.version>8.1.0</storage.version>
+		<storage.version>9.0-SNAPSHOT</storage.version>
 		<storagespies.version>1.5.0</storagespies.version>
 		<initialize.version>1.4.0</initialize.version>
 		<data.version>7.7.0</data.version>
