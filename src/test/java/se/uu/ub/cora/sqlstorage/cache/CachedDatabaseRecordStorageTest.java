@@ -25,9 +25,11 @@ import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
 import se.uu.ub.cora.data.DataGroup;
+import se.uu.ub.cora.data.DataRecordGroup;
 import se.uu.ub.cora.data.collected.Link;
 import se.uu.ub.cora.data.collected.StorageTerm;
 import se.uu.ub.cora.data.spies.DataGroupSpy;
+import se.uu.ub.cora.data.spies.DataRecordGroupSpy;
 import se.uu.ub.cora.storage.Filter;
 import se.uu.ub.cora.storage.RecordStorage;
 import se.uu.ub.cora.storage.StorageReadResult;
@@ -58,6 +60,19 @@ public class CachedDatabaseRecordStorageTest {
 
 	@Test
 	public void testReadSentToMemory() throws Exception {
+		memory.MRV.setDefaultReturnValuesSupplier("read", DataRecordGroupSpy::new);
+
+		DataRecordGroup result = db.read(type, id);
+
+		memory.MCR.assertParameters("read", 0, type, id);
+		memory.MCR.assertReturn("read", 0, result);
+
+		database.MCR.assertMethodNotCalled("read");
+	}
+
+	@Test
+	public void testOldReadSentToMemory() throws Exception {
+
 		DataGroup result = db.read(types, id);
 
 		memory.MCR.assertParameters("read", 0, types, id);
