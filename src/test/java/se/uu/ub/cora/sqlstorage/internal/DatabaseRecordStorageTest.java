@@ -1,5 +1,5 @@
 /*
- * Copyright 2021, 2022 Uppsala University Library
+ * Copyright 2021, 2022, 2023 Uppsala University Library
  *
  * This file is part of Cora.
  *
@@ -33,10 +33,13 @@ import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
 import se.uu.ub.cora.data.DataGroup;
+import se.uu.ub.cora.data.DataProvider;
+import se.uu.ub.cora.data.DataRecordGroup;
 import se.uu.ub.cora.data.collected.Link;
 import se.uu.ub.cora.data.collected.StorageTerm;
 import se.uu.ub.cora.data.converter.DataToJsonConverterProvider;
 import se.uu.ub.cora.data.converter.JsonToDataConverterProvider;
+import se.uu.ub.cora.data.spies.DataFactorySpy;
 import se.uu.ub.cora.json.parser.JsonValue;
 import se.uu.ub.cora.sqlstorage.spy.data.DataGroupSpy;
 import se.uu.ub.cora.sqlstorage.spy.json.DataToJsonConverterFactoryCreatorSpy;
@@ -65,7 +68,7 @@ public class DatabaseRecordStorageTest {
 	private DatabaseRecordStorage storage;
 	private SqlDatabaseFactorySpy sqlDatabaseFactorySpy;
 	private JsonParserSpy jsonParserSpy;
-	private JsonToDataConverterFactorySpy factoryCreatorSpy;
+	private JsonToDataConverterFactorySpy jsonToDataConverterFactory;
 	private Filter filter;
 	private Set<StorageTerm> emptyStorageTerms;
 	private Set<Link> emptyLinkSet;
@@ -74,14 +77,15 @@ public class DatabaseRecordStorageTest {
 	private String dataDivider;
 	private String someType;
 	private String someId;
+	private DataFactorySpy dataFactorySpy;
 
 	@BeforeMethod
 	public void beforeMethod() {
 		filter = new Filter();
 		emptyStorageTerms = new LinkedHashSet<>();
 		emptyLinkSet = new LinkedHashSet<>();
-		factoryCreatorSpy = new JsonToDataConverterFactorySpy();
-		JsonToDataConverterProvider.setJsonToDataConverterFactory(factoryCreatorSpy);
+		jsonToDataConverterFactory = new JsonToDataConverterFactorySpy();
+		JsonToDataConverterProvider.setJsonToDataConverterFactory(jsonToDataConverterFactory);
 		dataToJsonConverterFactoryCreatorSpy = new DataToJsonConverterFactoryCreatorSpy();
 		DataToJsonConverterProvider
 				.setDataToJsonConverterFactoryCreator(dataToJsonConverterFactoryCreatorSpy);
@@ -95,17 +99,98 @@ public class DatabaseRecordStorageTest {
 
 		someType = "someType";
 		someId = "someId";
+
+		dataFactorySpy = new DataFactorySpy();
+		DataProvider.onlyForTestSetDataFactory(dataFactorySpy);
 	}
 
 	@Test
 	public void testReadTableFacadeFactoredAndCloseCalled() throws Exception {
-		storage.read(List.of("someType", "someOtherType"), "someId");
+		storage.read("someType", "someId");
 		TableFacadeSpy tableFacadeSpy = getFirstFactoredTableFacadeSpy();
 		tableFacadeSpy.MCR.assertMethodWasCalled("close");
 	}
 
 	@Test
 	public void testReadParametersAddedToTableQueryAndPassedOn() throws Exception {
+		storage.read("someType", "someId");
+
+		sqlDatabaseFactorySpy.MCR.assertParameters("factorTableQuery", 0, "record");
+		TableQuerySpy tableQuerySpy = getFactoredTableQueryUsingCallNumber(0);
+
+		tableQuerySpy.MCR.assertParameters("addCondition", 0, "type", "someType");
+		tableQuerySpy.MCR.assertParameters("addCondition", 1, "id", "someId");
+
+		TableFacadeSpy tableFacadeSpy = getFirstFactoredTableFacadeSpy();
+		tableFacadeSpy.MCR.assertParameters("readOneRowForQuery", 0, tableQuerySpy);
+	}
+
+	@Test
+	public void testReadTypeNotFound() throws Exception {
+		sqlDatabaseFactorySpy.throwNotFoundExceptionFromTableFacadeOnRead = true;
+		try {
+			storage.read("someType", "someId");
+			makeSureErrorIsThrownFromAboveStatements();
+
+		} catch (Exception e) {
+			assertTrue(e instanceof RecordNotFoundException);
+			assertEquals(e.getMessage(),
+					"No record found for recordType(s): someType, with id: someId.");
+			assertEquals(e.getCause().getMessage(),
+					"Not found error from readOneRowForQuery in tablespy");
+		}
+	}
+
+	@Test
+	public void testReadTypeOtherError() throws Exception {
+		sqlDatabaseFactorySpy.throwDataExceptionFromTableFacadeOnRead = true;
+		try {
+			storage.read("someType", "someId");
+			makeSureErrorIsThrownFromAboveStatements();
+
+		} catch (Exception e) {
+			assertTrue(e instanceof StorageException);
+			assertEquals(e.getMessage(), "Read did not generate a single result for recordType(s): "
+					+ "someType, with id: someId.");
+			assertEquals(e.getCause().getMessage(),
+					"Data error from readOneRowForQuery in tablespy");
+		}
+	}
+
+	@Test
+	public void testReadOkReadJsonConvertedToDataGroup() throws Exception {
+		DataRecordGroup readValueFromStorage = storage.read("someType", "someId");
+
+		TableFacadeSpy tableFacade = (TableFacadeSpy) sqlDatabaseFactorySpy.MCR
+				.getReturnValue("factorTableFacade", 0);
+
+		RowSpy rowSpy = (RowSpy) tableFacade.MCR.getReturnValue("readOneRowForQuery", 0);
+		rowSpy.MCR.assertParameters("getValueByColumn", 0, "data");
+		var jsonRecord = rowSpy.MCR.getReturnValue("getValueByColumn", 0);
+
+		jsonParserSpy.MCR.assertParameters("parseString", 0, jsonRecord);
+		var jsonValue = jsonParserSpy.MCR.getReturnValue("parseString", 0);
+
+		jsonToDataConverterFactory.MCR.assertParameters("createForJsonObject", 0, jsonValue);
+		JsonToDataConverterSpy jsonToDataConverter = (JsonToDataConverterSpy) jsonToDataConverterFactory.MCR
+				.getReturnValue("createForJsonObject", 0);
+
+		jsonToDataConverter.MCR.assertParameters("toInstance", 0);
+		var dataGroup = jsonToDataConverter.MCR.getReturnValue("toInstance", 0);
+
+		dataFactorySpy.MCR.assertParameters("factorRecordGroupFromDataGroup", 0, dataGroup);
+		dataFactorySpy.MCR.assertReturn("factorRecordGroupFromDataGroup", 0, readValueFromStorage);
+	}
+
+	@Test
+	public void testOldReadTableFacadeFactoredAndCloseCalled() throws Exception {
+		storage.read(List.of("someType", "someOtherType"), "someId");
+		TableFacadeSpy tableFacadeSpy = getFirstFactoredTableFacadeSpy();
+		tableFacadeSpy.MCR.assertMethodWasCalled("close");
+	}
+
+	@Test
+	public void testOldReadParametersAddedToTableQueryAndPassedOn() throws Exception {
 		List<String> types = List.of("someType", "someOtherType");
 		storage.read(types, "someId");
 
@@ -129,7 +214,7 @@ public class DatabaseRecordStorageTest {
 	}
 
 	@Test
-	public void testReadTypeNotFound() throws Exception {
+	public void testOldReadTypeNotFound() throws Exception {
 		sqlDatabaseFactorySpy.throwNotFoundExceptionFromTableFacadeOnRead = true;
 		try {
 			storage.read(List.of("someType", "someOtherType"), "someId");
@@ -145,7 +230,7 @@ public class DatabaseRecordStorageTest {
 	}
 
 	@Test
-	public void testReadTypeOtherError() throws Exception {
+	public void testOldReadTypeOtherError() throws Exception {
 		sqlDatabaseFactorySpy.throwDataExceptionFromTableFacadeOnRead = true;
 		try {
 			storage.read(List.of("someType", "someOtherType"), "someId");
@@ -161,7 +246,7 @@ public class DatabaseRecordStorageTest {
 	}
 
 	@Test
-	public void testReadOkReadJsonConvertedToDataGroup() throws Exception {
+	public void testOldReadOkReadJsonConvertedToDataGroup() throws Exception {
 		DataGroup readValueFromStorage = storage.read(List.of("someType", "someOtherType"),
 				"someId");
 
@@ -271,11 +356,12 @@ public class DatabaseRecordStorageTest {
 	private void assertcreateForJsonObjectParameters(int callNumber) {
 		JsonValue jsonValue = (JsonValue) jsonParserSpy.MCR.getReturnValue("parseString",
 				callNumber);
-		factoryCreatorSpy.MCR.assertParameters("createForJsonObject", callNumber, jsonValue);
+		jsonToDataConverterFactory.MCR.assertParameters("createForJsonObject", callNumber,
+				jsonValue);
 	}
 
 	private void assertToInstanceParameters(int callNumber, DataGroup readValueFromStorage) {
-		JsonToDataConverterSpy jsonToDataConverterSpy = (JsonToDataConverterSpy) factoryCreatorSpy.MCR
+		JsonToDataConverterSpy jsonToDataConverterSpy = (JsonToDataConverterSpy) jsonToDataConverterFactory.MCR
 				.getReturnValue("createForJsonObject", callNumber);
 		jsonToDataConverterSpy.MCR.assertReturn("toInstance", 0, readValueFromStorage);
 	}

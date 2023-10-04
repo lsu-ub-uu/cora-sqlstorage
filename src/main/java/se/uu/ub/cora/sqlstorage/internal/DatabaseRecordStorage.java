@@ -1,5 +1,5 @@
 /*
- * Copyright 2021, 2022 Uppsala University Library
+ * Copyright 2021, 2022, 2023 Uppsala University Library
  *
  * This file is part of Cora.
  *
@@ -28,6 +28,8 @@ import java.util.Set;
 import org.postgresql.util.PGobject;
 
 import se.uu.ub.cora.data.DataGroup;
+import se.uu.ub.cora.data.DataProvider;
+import se.uu.ub.cora.data.DataRecordGroup;
 import se.uu.ub.cora.data.collected.Link;
 import se.uu.ub.cora.data.collected.StorageTerm;
 import se.uu.ub.cora.data.converter.DataToJsonConverter;
@@ -99,14 +101,50 @@ public class DatabaseRecordStorage implements RecordStorage {
 		}
 	}
 
+	@Override
+	public DataRecordGroup read(String type, String id) {
+		try (TableFacade tableFacade = sqlDatabaseFactory.factorTableFacade()) {
+			Row readRow = readFromDatabase(type, id, tableFacade);
+			return convertRowToDataRecordGroup(readRow);
+		} catch (SqlNotFoundException e) {
+			throw RecordNotFoundException.withMessageAndException(MessageFormat
+					.format("No record found for recordType(s): {0}, with id: {1}.", type, id), e);
+		} catch (SqlDataException e) {
+			throw StorageException.withMessageAndException(MessageFormat.format(
+					"Read did not generate a single result for recordType(s): {0}, with id: {1}.",
+					type, id), e);
+		}
+	}
+
+	private DataRecordGroup convertRowToDataRecordGroup(Row readRow) {
+		String jsonRecord = (String) readRow.getValueByColumn(RECORD_DATA_COLUMN);
+		JsonValue jsonValue = jsonParser.parseString(jsonRecord);
+		JsonToDataConverter jsonToDataConverter = JsonToDataConverterProvider
+				.getConverterUsingJsonObject(jsonValue);
+		DataGroup dataGroup = (DataGroup) jsonToDataConverter.toInstance();
+		return DataProvider.createRecordGroupFromDataGroup(dataGroup);
+	}
+
 	private DataGroup readAndConvertData(List<String> types, String id, TableFacade tableFacade) {
 		Row readRow = readFromDatabase(types, id, tableFacade);
 		return convertRowToDataGroup(readRow);
 	}
 
+	private Row readFromDatabase(String type, String id, TableFacade tableFacade) {
+		TableQuery tableQuery = assembleReadOneQuery(type, id);
+		return tableFacade.readOneRowForQuery(tableQuery);
+	}
+
 	private Row readFromDatabase(List<String> types, String id, TableFacade tableFacade) {
 		TableQuery tableQuery = assembleReadOneQuery(types, id);
 		return tableFacade.readOneRowForQuery(tableQuery);
+	}
+
+	private TableQuery assembleReadOneQuery(String type, String id) {
+		TableQuery tableQuery = sqlDatabaseFactory.factorTableQuery(TABLE_RECORD);
+		tableQuery.addCondition(TYPE_COLUMN, type);
+		tableQuery.addCondition(ID_COLUMN, id);
+		return tableQuery;
 	}
 
 	private TableQuery assembleReadOneQuery(List<String> types, String id) {

@@ -25,9 +25,9 @@ import se.uu.ub.cora.sqldatabase.table.TableFacade;
 import se.uu.ub.cora.sqldatabase.table.TableQuery;
 import se.uu.ub.cora.sqlstorage.spy.data.DatabaseFacadeSpy;
 import se.uu.ub.cora.testutils.mcr.MethodCallRecorder;
+import se.uu.ub.cora.testutils.mrv.MethodReturnValues;
 
 public class SqlDatabaseFactorySpy implements SqlDatabaseFactory {
-	public MethodCallRecorder MCR = new MethodCallRecorder();
 	public boolean throwExceptionFromTableFacadeOnRead = false;
 	public boolean throwNotFoundExceptionFromTableFacadeOnRead = false;
 	public boolean throwDataExceptionFromTableFacadeOnRead = false;
@@ -39,12 +39,19 @@ public class SqlDatabaseFactorySpy implements SqlDatabaseFactory {
 	public int numberOfAffectedRows = 0;
 	public boolean usingTransaction = false;
 
+	public MethodCallRecorder MCR = new MethodCallRecorder();
+	public MethodReturnValues MRV = new MethodReturnValues();
+
+	public SqlDatabaseFactorySpy() {
+		MCR.useMRV(MRV);
+		MRV.setDefaultReturnValuesSupplier("factorDatabaseFacade", DatabaseFacadeSpy::new);
+		MRV.setDefaultReturnValuesSupplier("factorTableFacade", DatabaseFacadeSpy::new);
+		MRV.setDefaultReturnValuesSupplier("factorTableQuery", TableQuerySpy::new);
+	}
+
 	@Override
 	public DatabaseFacade factorDatabaseFacade() {
-		MCR.addCall();
-		DatabaseFacadeSpy dbSpy = new DatabaseFacadeSpy();
-		MCR.addReturned(dbSpy);
-		return (DatabaseFacade) dbSpy;
+		return (DatabaseFacade) MCR.addCallAndReturnFromMRV();
 	}
 
 	@Override
@@ -67,10 +74,7 @@ public class SqlDatabaseFactorySpy implements SqlDatabaseFactory {
 
 	@Override
 	public TableQuery factorTableQuery(String tableName) {
-		MCR.addCall("tableName", tableName);
-		TableQuerySpy tableQuerySpy = new TableQuerySpy();
-		MCR.addReturned(tableQuerySpy);
-		return tableQuerySpy;
+		return (TableQuery) MCR.addCallAndReturnFromMRV("tableName", tableName);
 	}
 
 }

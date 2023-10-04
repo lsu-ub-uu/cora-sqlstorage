@@ -22,6 +22,7 @@ import java.util.List;
 import java.util.Set;
 
 import se.uu.ub.cora.data.DataGroup;
+import se.uu.ub.cora.data.DataRecordGroup;
 import se.uu.ub.cora.data.collected.Link;
 import se.uu.ub.cora.data.collected.StorageTerm;
 import se.uu.ub.cora.storage.Filter;
@@ -46,6 +47,11 @@ public class CachedDatabaseRecordStorage implements RecordStorage {
 	@Override
 	public DataGroup read(List<String> types, String id) {
 		return memory.read(types, id);
+	}
+
+	@Override
+	public DataRecordGroup read(String type, String id) {
+		return memory.read(type, id);
 	}
 
 	@Override
@@ -99,5 +105,4 @@ public class CachedDatabaseRecordStorage implements RecordStorage {
 	RecordStorage onlyForTestGetDatabase() {
 		return database;
 	}
-
 }

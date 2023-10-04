@@ -36,7 +36,7 @@
 
 	<properties>
 		<storage.version>9.0-SNAPSHOT</storage.version>
-		<storagespies.version>1.5.0</storagespies.version>
+		<storagespies.version>1.6-SNAPSHOT</storagespies.version>
 		<initialize.version>1.4.0</initialize.version>
 		<data.version>7.7.0</data.version>
 		<json.version>3.8.0</json.version>
