@@ -71,4 +71,10 @@ public class JsonObjectSpy implements JsonObject {
 		return null;
 	}
 
+	@Override
+	public void removeKey(String key) {
+		// TODO Auto-generated method stub
+
+	}
+
 }
