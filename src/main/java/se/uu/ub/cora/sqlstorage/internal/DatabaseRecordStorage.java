@@ -21,6 +21,7 @@ package se.uu.ub.cora.sqlstorage.internal;
 import java.sql.SQLException;
 import java.text.MessageFormat;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
@@ -372,6 +373,19 @@ public class DatabaseRecordStorage implements RecordStorage {
 	}
 
 	@Override
+	public StorageReadResult readList(String type, Filter filter) {
+		StorageReadResult readResult = readList(List.of(type), filter);
+
+		List<DataRecordGroup> listOfDataRecordGroups = readResult.listOfDataRecordGroups;
+		for (DataGroup dataGroup : readResult.listOfDataGroups) {
+			DataRecordGroup dataRecordGroup = DataProvider.createRecordGroupFromDataGroup(dataGroup);
+			listOfDataRecordGroups.add(dataRecordGroup);
+		}
+		readResult.listOfDataGroups = Collections.emptyList();
+		return readResult;
+	}
+
+	@Override
 	public StorageReadResult readList(List<String> types, Filter filter) {
 		try (TableFacade tableFacade = sqlDatabaseFactory.factorTableFacade()) {
 			return readAndConvertDataList(types, tableFacade, filter);
@@ -562,5 +576,4 @@ public class DatabaseRecordStorage implements RecordStorage {
 		// Needed for test
 		return jsonParser;
 	}
-
 }

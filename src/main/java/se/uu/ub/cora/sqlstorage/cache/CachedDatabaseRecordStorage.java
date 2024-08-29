@@ -78,6 +78,11 @@ public class CachedDatabaseRecordStorage implements RecordStorage {
 	}
 
 	@Override
+	public StorageReadResult readList(String type, Filter filter) {
+		return memory.readList(type, filter);
+	}
+
+	@Override
 	public StorageReadResult readList(List<String> types, Filter filter) {
 		return memory.readList(types, filter);
 	}
@@ -105,4 +110,5 @@ public class CachedDatabaseRecordStorage implements RecordStorage {
 	RecordStorage onlyForTestGetDatabase() {
 		return database;
 	}
+
 }

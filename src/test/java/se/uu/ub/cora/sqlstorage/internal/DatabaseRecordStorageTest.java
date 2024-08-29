@@ -40,8 +40,10 @@ import se.uu.ub.cora.data.collected.StorageTerm;
 import se.uu.ub.cora.data.converter.DataToJsonConverterProvider;
 import se.uu.ub.cora.data.converter.JsonToDataConverterProvider;
 import se.uu.ub.cora.data.spies.DataFactorySpy;
+import se.uu.ub.cora.data.spies.DataGroupSpy;
+import se.uu.ub.cora.json.parser.JsonParser;
 import se.uu.ub.cora.json.parser.JsonValue;
-import se.uu.ub.cora.sqlstorage.spy.data.DataGroupSpy;
+import se.uu.ub.cora.sqldatabase.SqlDatabaseFactory;
 import se.uu.ub.cora.sqlstorage.spy.json.DataToJsonConverterFactoryCreatorSpy;
 import se.uu.ub.cora.sqlstorage.spy.json.DataToJsonConverterFactorySpy;
 import se.uu.ub.cora.sqlstorage.spy.json.DataToJsonConverterSpy;
@@ -60,6 +62,8 @@ import se.uu.ub.cora.storage.RecordNotFoundException;
 import se.uu.ub.cora.storage.RelationalOperator;
 import se.uu.ub.cora.storage.StorageException;
 import se.uu.ub.cora.storage.StorageReadResult;
+import se.uu.ub.cora.testutils.mcr.MethodCallRecorder;
+import se.uu.ub.cora.testutils.mrv.MethodReturnValues;
 
 public class DatabaseRecordStorageTest {
 
@@ -81,14 +85,17 @@ public class DatabaseRecordStorageTest {
 
 	@BeforeMethod
 	public void beforeMethod() {
-		filter = new Filter();
-		emptyStorageTerms = new LinkedHashSet<>();
-		emptyLinkSet = new LinkedHashSet<>();
+		dataFactorySpy = new DataFactorySpy();
+		DataProvider.onlyForTestSetDataFactory(dataFactorySpy);
 		jsonToDataConverterFactory = new JsonToDataConverterFactorySpy();
 		JsonToDataConverterProvider.setJsonToDataConverterFactory(jsonToDataConverterFactory);
 		dataToJsonConverterFactoryCreatorSpy = new DataToJsonConverterFactoryCreatorSpy();
 		DataToJsonConverterProvider
 				.setDataToJsonConverterFactoryCreator(dataToJsonConverterFactoryCreatorSpy);
+
+		filter = new Filter();
+		emptyStorageTerms = new LinkedHashSet<>();
+		emptyLinkSet = new LinkedHashSet<>();
 		sqlDatabaseFactorySpy = new SqlDatabaseFactorySpy();
 		sqlDatabaseFactorySpy.numberOfAffectedRows = 1;
 		jsonParserSpy = new JsonParserSpy();
@@ -99,9 +106,6 @@ public class DatabaseRecordStorageTest {
 
 		someType = "someType";
 		someId = "someId";
-
-		dataFactorySpy = new DataFactorySpy();
-		DataProvider.onlyForTestSetDataFactory(dataFactorySpy);
 	}
 
 	@Test
@@ -253,6 +257,63 @@ public class DatabaseRecordStorageTest {
 		TableFacadeSpy tableFacadeSpy = getFirstFactoredTableFacadeSpy();
 		RowSpy readRow = (RowSpy) tableFacadeSpy.MCR.getReturnValue("readOneRowForQuery", 0);
 		assertRowToDataGroupConvertion(0, readRow, readValueFromStorage);
+	}
+
+	@Test
+	public void testReadListOneTypeNoResult() throws Exception {
+		OnlyForTestDatabaseRecordStorage sql = new OnlyForTestDatabaseRecordStorage(null, null);
+
+		sql.readList(someType, filter);
+
+		sql.MCR.assertParameterAsEqual("readList", 0, "types", List.of(someType));
+		sql.MCR.assertParameter("readList", 0, "filter", filter);
+
+		dataFactorySpy.MCR.assertMethodNotCalled("factorRecordGroupFromDataGroup");
+	}
+
+	@Test
+	public void testReadListOneType() throws Exception {
+		OnlyForTestDatabaseRecordStorage sql = new OnlyForTestDatabaseRecordStorage(null, null);
+		StorageReadResult storageReadResult = createStorageReadResultWithToDataGroups();
+		sql.MRV.setDefaultReturnValuesSupplier("readList", () -> storageReadResult);
+		sql.readList(someType, filter);
+
+		dataFactorySpy.MCR.assertNumberOfCallsToMethod("factorRecordGroupFromDataGroup", 2);
+		for (DataGroup dataGroup : storageReadResult.listOfDataGroups) {
+			DataRecordGroup dataRecordGroup = (DataRecordGroup) dataFactorySpy.MCR
+					.assertCalledParametersReturn("factorRecordGroupFromDataGroup", dataGroup);
+			assertTrue(storageReadResult.listOfDataRecordGroups.contains(dataRecordGroup));
+		}
+
+		assertTrue(storageReadResult.listOfDataGroups.isEmpty());
+
+	}
+
+	private StorageReadResult createStorageReadResultWithToDataGroups() {
+		StorageReadResult storageReadResult = new StorageReadResult();
+		DataGroupSpy firstDataGroup = new DataGroupSpy();
+		storageReadResult.listOfDataGroups.add(firstDataGroup);
+		DataGroupSpy secondDataGroup = new DataGroupSpy();
+		storageReadResult.listOfDataGroups.add(secondDataGroup);
+		return storageReadResult;
+	}
+
+	private class OnlyForTestDatabaseRecordStorage extends DatabaseRecordStorage {
+		public MethodCallRecorder MCR = new MethodCallRecorder();
+		public MethodReturnValues MRV = new MethodReturnValues();
+
+		public OnlyForTestDatabaseRecordStorage(SqlDatabaseFactory sqlDatabaseFactory,
+				JsonParser jsonParser) {
+			super(sqlDatabaseFactory, jsonParser);
+			MCR.useMRV(MRV);
+			MRV.setDefaultReturnValuesSupplier("readList", StorageReadResult::new);
+		}
+
+		@Override
+		public StorageReadResult readList(List<String> types, Filter filter) {
+			return (StorageReadResult) MCR.addCallAndReturnFromMRV("types", types, "filter",
+					filter);
+		}
 	}
 
 	@Test
