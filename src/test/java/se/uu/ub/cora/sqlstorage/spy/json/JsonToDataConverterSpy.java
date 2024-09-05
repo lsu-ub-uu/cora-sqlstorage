@@ -20,7 +20,7 @@ package se.uu.ub.cora.sqlstorage.spy.json;
 
 import se.uu.ub.cora.data.Convertible;
 import se.uu.ub.cora.data.converter.JsonToDataConverter;
-import se.uu.ub.cora.sqlstorage.spy.data.DataGroupSpy;
+import se.uu.ub.cora.data.spies.DataGroupSpy;
 import se.uu.ub.cora.testutils.mcr.MethodCallRecorder;
 
 public class JsonToDataConverterSpy implements JsonToDataConverter {

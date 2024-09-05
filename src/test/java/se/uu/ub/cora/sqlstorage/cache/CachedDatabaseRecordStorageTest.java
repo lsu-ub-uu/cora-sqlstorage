@@ -113,10 +113,20 @@ public class CachedDatabaseRecordStorageTest {
 	}
 
 	@Test
-	public void testReadListSentToMemory() throws Exception {
+	public void testReadListOldSentToMemory() throws Exception {
 		StorageReadResult result = db.readList(types, filter);
 
 		memory.MCR.assertParameters("readList", 0, types, filter);
+		memory.MCR.assertReturn("readList", 0, result);
+
+		database.MCR.assertMethodNotCalled("readList");
+	}
+
+	@Test
+	public void testReadListSentToMemory() throws Exception {
+		StorageReadResult result = db.readList(type, filter);
+
+		memory.MCR.assertParameters("readList", 0, type, filter);
 		memory.MCR.assertReturn("readList", 0, result);
 
 		database.MCR.assertMethodNotCalled("readList");
