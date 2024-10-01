@@ -72,6 +72,8 @@ public class CachedDatabaseRecordStorageTest {
 
 	@Test
 	public void testOldReadSentToMemory() throws Exception {
+		memory.MRV.setDefaultReturnValuesSupplier("read", DataGroupSpy::new);
+		database.MRV.setDefaultReturnValuesSupplier("read", DataGroupSpy::new);
 
 		DataGroup result = db.read(types, id);
 
