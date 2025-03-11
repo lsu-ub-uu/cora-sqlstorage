@@ -79,4 +79,9 @@ public class DatabaseStorageInstanceProvider implements RecordStorageInstancePro
 		JsonParser jsonParser = new OrgJsonParser();
 		setStaticInstance(new DatabaseRecordStorage(sqlDatabaseFactory, jsonParser));
 	}
+
+	@Override
+	public void dataChanged(String type, String id, String action) {
+		// No implementation needed for this class
+	}
 }

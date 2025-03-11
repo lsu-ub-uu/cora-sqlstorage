@@ -1,5 +1,5 @@
 /*
- * Copyright 2021, 2022, 2023 Uppsala University Library
+ * Copyright 2021, 2022, 2023, 2025 Uppsala University Library
  *
  * This file is part of Cora.
  *
@@ -67,9 +67,12 @@ import se.uu.ub.cora.storage.StorageReadResult;
  * This implementation of RecordStorage is threadsafe.
  */
 public class DatabaseRecordStorage implements RecordStorage {
+	private static final String RECORDID_COLUMN = "recordid";
+	private static final String RECORDTYPE_COLUMN = "recordtype";
 	private static final String TABLE_RECORD = "record";
 	private static final String VIEW_RECORDSTORAGETERM = "recordstorageterm";
 	private static final String TABLE_LINK = "link";
+	private static final String TABLE_STORAGETERM = "storageterm";
 
 	private static final String FROMTYPE_COLUMN = "fromtype";
 	private static final String FROMID_COLUMN = "fromid";
@@ -80,6 +83,9 @@ public class DatabaseRecordStorage implements RecordStorage {
 	private static final String ID_COLUMN = "id";
 	private static final String RECORD_DATA_COLUMN = "data";
 	private static final String DATA_DIVIDER_COLUMN = "datadivider";
+	private static final String STORAGETERMID_COLUMN = "storagetermid";
+	private static final String STORAGEKEY_COLUMN = "storagekey";
+	private static final String VALUE_COLUMN = "value";
 	private SqlDatabaseFactory sqlDatabaseFactory;
 	private JsonParser jsonParser;
 
@@ -211,8 +217,8 @@ public class DatabaseRecordStorage implements RecordStorage {
 
 	private void addParametersForStorageTerm(String type, String id, StorageTerm storageTerm,
 			TableQuery storageTermsQuery) {
-		storageTermsQuery.addParameter("recordtype", type);
-		storageTermsQuery.addParameter("recordid", id);
+		storageTermsQuery.addParameter(RECORDTYPE_COLUMN, type);
+		storageTermsQuery.addParameter(RECORDID_COLUMN, id);
 		storageTermsQuery.addParameter("storagetermid", storageTerm.storageTermId());
 		storageTermsQuery.addParameter("value", storageTerm.value());
 		storageTermsQuery.addParameter("storagekey", storageTerm.storageKey());
@@ -285,8 +291,8 @@ public class DatabaseRecordStorage implements RecordStorage {
 	private void createDeleteQueryForStorageTermAndAddItToTableFacade(String type, String id,
 			TableFacade tableFacade) {
 		TableQuery storageTermQuery = sqlDatabaseFactory.factorTableQuery("storageterm");
-		storageTermQuery.addCondition("recordtype", type);
-		storageTermQuery.addCondition("recordid", id);
+		storageTermQuery.addCondition(RECORDTYPE_COLUMN, type);
+		storageTermQuery.addCondition(RECORDID_COLUMN, id);
 		tableFacade.deleteRowsForQuery(storageTermQuery);
 	}
 
@@ -378,7 +384,8 @@ public class DatabaseRecordStorage implements RecordStorage {
 
 		List<DataRecordGroup> listOfDataRecordGroups = readResult.listOfDataRecordGroups;
 		for (DataGroup dataGroup : readResult.listOfDataGroups) {
-			DataRecordGroup dataRecordGroup = DataProvider.createRecordGroupFromDataGroup(dataGroup);
+			DataRecordGroup dataRecordGroup = DataProvider
+					.createRecordGroupFromDataGroup(dataGroup);
 			listOfDataRecordGroups.add(dataRecordGroup);
 		}
 		readResult.listOfDataGroups = Collections.emptyList();
@@ -494,22 +501,55 @@ public class DatabaseRecordStorage implements RecordStorage {
 	}
 
 	private Set<Link> tryToGetLinksToRecord(String type, String id, TableFacade tableFacade) {
-		List<Row> readRowsForQuery = findLinksInStorage(tableFacade, type, id);
-		return transformRowsToLinks(readRowsForQuery);
+		List<Row> readRowsForQuery = findToLinksInStorage(tableFacade, type, id);
+		return transformRowsFromToLinks(readRowsForQuery);
 	}
 
-	private List<Row> findLinksInStorage(TableFacade tableFacade, String type, String id) {
+	private List<Row> findToLinksInStorage(TableFacade tableFacade, String type, String id) {
 		TableQuery tableQuery = sqlDatabaseFactory.factorTableQuery(TABLE_LINK);
 		tableQuery.addCondition(TOTYPE_COLUMN, type);
 		tableQuery.addCondition(TOID_COLUMN, id);
 		return tableFacade.readRowsForQuery(tableQuery);
 	}
 
-	private Set<Link> transformRowsToLinks(List<Row> readRowsForQuery) {
+	private Set<Link> transformRowsFromToLinks(List<Row> readRowsForQuery) {
 		Set<Link> result = new LinkedHashSet<>();
 		for (Row row : readRowsForQuery) {
 			String linkType = (String) row.getValueByColumn(FROMTYPE_COLUMN);
 			String linkId = (String) row.getValueByColumn(FROMID_COLUMN);
+			Link link = new Link(linkType, linkId);
+			result.add(link);
+		}
+		return result;
+	}
+
+	@Override
+	public Set<Link> getLinksFromRecord(String type, String id) {
+		try (TableFacade tableFacade = sqlDatabaseFactory.factorTableFacade()) {
+			return tryToGetLinksFromRecord(type, id, tableFacade);
+		} catch (Exception e) {
+			throw StorageException.withMessageAndException(MessageFormat
+					.format("Could not get links for type: {0} and id: {1}.", type, id), e);
+		}
+	}
+
+	private Set<Link> tryToGetLinksFromRecord(String type, String id, TableFacade tableFacade) {
+		List<Row> readRowsForQuery = findFromLinksInStorage(tableFacade, type, id);
+		return transformRowsFromFromLinks(readRowsForQuery);
+	}
+
+	private List<Row> findFromLinksInStorage(TableFacade tableFacade, String type, String id) {
+		TableQuery tableQuery = sqlDatabaseFactory.factorTableQuery(TABLE_LINK);
+		tableQuery.addCondition(FROMTYPE_COLUMN, type);
+		tableQuery.addCondition(FROMID_COLUMN, id);
+		return tableFacade.readRowsForQuery(tableQuery);
+	}
+
+	private Set<Link> transformRowsFromFromLinks(List<Row> readRowsForQuery) {
+		Set<Link> result = new LinkedHashSet<>();
+		for (Row row : readRowsForQuery) {
+			String linkType = (String) row.getValueByColumn(TOTYPE_COLUMN);
+			String linkId = (String) row.getValueByColumn(TOID_COLUMN);
 			Link link = new Link(linkType, linkId);
 			result.add(link);
 		}
@@ -548,6 +588,41 @@ public class DatabaseRecordStorage implements RecordStorage {
 			String id, SqlDatabaseException e) {
 		return RecordNotFoundException.withMessageAndException(MessageFormat
 				.format("RecordType: {0} with id: {1}, not found in storage.", type, id), e);
+	}
+
+	@Override
+	public Set<StorageTerm> getStorageTermsForRecord(String type, String id) {
+		try (TableFacade tableFacade = sqlDatabaseFactory.factorTableFacade()) {
+			return tryToGetStorageTermsForRecord(type, id, tableFacade);
+		} catch (Exception e) {
+			throw StorageException.withMessageAndException(MessageFormat
+					.format("Could not get storageTerms for type: {0} and id: {1}.", type, id), e);
+		}
+	}
+
+	private Set<StorageTerm> tryToGetStorageTermsForRecord(String type, String id,
+			TableFacade tableFacade) {
+		List<Row> readRowsForQuery = findStorageTermsInStorage(tableFacade, type, id);
+		return transformRowsToStorageTerms(readRowsForQuery);
+	}
+
+	private List<Row> findStorageTermsInStorage(TableFacade tableFacade, String type, String id) {
+		TableQuery tableQuery = sqlDatabaseFactory.factorTableQuery(TABLE_STORAGETERM);
+		tableQuery.addCondition(RECORDTYPE_COLUMN, type);
+		tableQuery.addCondition(RECORDID_COLUMN, id);
+		return tableFacade.readRowsForQuery(tableQuery);
+	}
+
+	private Set<StorageTerm> transformRowsToStorageTerms(List<Row> readRowsForQuery) {
+		Set<StorageTerm> result = new LinkedHashSet<>();
+		for (Row row : readRowsForQuery) {
+			String termId = (String) row.getValueByColumn(STORAGETERMID_COLUMN);
+			String key = (String) row.getValueByColumn(STORAGEKEY_COLUMN);
+			String value = (String) row.getValueByColumn(VALUE_COLUMN);
+			StorageTerm term = new StorageTerm(termId, key, value);
+			result.add(term);
+		}
+		return result;
 	}
 
 	@Override

@@ -1,5 +1,5 @@
 /*
- * Copyright 2021,2022 Uppsala University Library
+ * Copyright 2021, 2022, 2025 Uppsala University Library
  *
  * This file is part of Cora.
  *
@@ -18,7 +18,14 @@
  */
 package se.uu.ub.cora.sqlstorage.cache;
 
+import java.util.Set;
+
 import se.uu.ub.cora.basicstorage.RecordStorageInMemory;
+import se.uu.ub.cora.data.DataGroup;
+import se.uu.ub.cora.data.DataProvider;
+import se.uu.ub.cora.data.DataRecordGroup;
+import se.uu.ub.cora.data.collected.Link;
+import se.uu.ub.cora.data.collected.StorageTerm;
 import se.uu.ub.cora.initialize.InitializationException;
 import se.uu.ub.cora.initialize.SettingsProvider;
 import se.uu.ub.cora.json.parser.JsonParser;
@@ -38,6 +45,8 @@ public class CachedDatabaseStorageInstanceProvider implements RecordStorageInsta
 			.getLoggerForClass(CachedDatabaseStorageInstanceProvider.class);
 	private static final String LOOKUP_NAME = "coraDatabaseLookupName";
 	private String databaseLookupValue;
+	private RecordStorage database;
+	private RecordStorage memory;
 
 	@Override
 	public int getOrderToSelectImplementionsBy() {
@@ -48,10 +57,6 @@ public class CachedDatabaseStorageInstanceProvider implements RecordStorageInsta
 	public RecordStorage getRecordStorage() {
 		possiblyStartStorage();
 		return DatabaseStorageInstance.getInstance();
-	}
-
-	static void setStaticInstance(RecordStorage recordStorage) {
-		DatabaseStorageInstance.setInstance(recordStorage);
 	}
 
 	private synchronized void possiblyStartStorage() {
@@ -78,23 +83,36 @@ public class CachedDatabaseStorageInstanceProvider implements RecordStorageInsta
 	}
 
 	private void createDependenciesAndStartStorage() {
-		RecordStorage cachedDbStorage = startCachedDbStorage();
-		setStaticInstance(cachedDbStorage);
+		RecordStorage dbStorage = startDbStorage();
+		setStaticInstance(dbStorage);
 	}
 
-	private RecordStorage startCachedDbStorage() {
+	static void setStaticInstance(RecordStorage recordStorage) {
+		DatabaseStorageInstance.setInstance(recordStorage);
+	}
+
+	private RecordStorage startDbStorage() {
 		SqlDatabaseFactory sqlDatabaseFactory = SqlDatabaseFactoryImp
 				.usingLookupNameFromContext(databaseLookupValue);
 		JsonParser jsonParser = new OrgJsonParser();
-		DatabaseRecordStorage database = new DatabaseRecordStorage(sqlDatabaseFactory, jsonParser);
-		if (shouldNotCache()) {
+		database = createDatabaseRecordStorage(sqlDatabaseFactory, jsonParser);
+		if (doNotCache()) {
 			return database;
 		}
-		RecordStorageInMemory memory = new RecordStorageInMemory();
+		memory = createRecordStorageInMemory();
 		return populateFromDatabase(sqlDatabaseFactory, jsonParser, database, memory);
 	}
 
-	private boolean shouldNotCache() {
+	protected RecordStorage createDatabaseRecordStorage(SqlDatabaseFactory sqlDatabaseFactory,
+			JsonParser jsonParser) {
+		return new DatabaseRecordStorage(sqlDatabaseFactory, jsonParser);
+	}
+
+	protected RecordStorage createRecordStorageInMemory() {
+		return new RecordStorageInMemory();
+	}
+
+	private boolean doNotCache() {
 		try {
 			String setting = SettingsProvider.getSetting("doNotCache");
 			return "true".equals(setting);
@@ -104,7 +122,7 @@ public class CachedDatabaseStorageInstanceProvider implements RecordStorageInsta
 	}
 
 	private CachedDatabaseRecordStorage populateFromDatabase(SqlDatabaseFactory sqlDatabaseFactory,
-			JsonParser jsonParser, DatabaseRecordStorage database, RecordStorageInMemory memory) {
+			JsonParser jsonParser, RecordStorage database, RecordStorage memory) {
 		FromDbStoragePopulator populator = createPopulater(sqlDatabaseFactory, jsonParser);
 		populator.populateStorageFromDatabase(memory);
 		return CachedDatabaseRecordStorage.usingDatabaseAndMemory(database, memory);
@@ -113,5 +131,38 @@ public class CachedDatabaseStorageInstanceProvider implements RecordStorageInsta
 	protected FromDbStoragePopulator createPopulater(SqlDatabaseFactory sqlDatabaseFactory,
 			JsonParser jsonParser) {
 		return new FromDbStoragePopulatorImp(sqlDatabaseFactory.factorDatabaseFacade(), jsonParser);
+	}
+
+	@Override
+	public void dataChanged(String type, String id, String action) {
+		if (cacheData()) {
+			handleDataCache(type, id, action);
+		}
+	}
+
+	private boolean cacheData() {
+		return !doNotCache();
+	}
+
+	private void handleDataCache(String type, String id, String action) {
+		if ("delete".equals(action)) {
+			memory.deleteByTypeAndId(type, id);
+		} else {
+			setDataInCache(type, id, action);
+		}
+	}
+
+	private void setDataInCache(String type, String id, String action) {
+		DataRecordGroup dataRecordGroup = database.read(type, id);
+		String dataDivider = dataRecordGroup.getDataDivider();
+		DataGroup dataGroup = DataProvider.createGroupFromRecordGroup(dataRecordGroup);
+		Set<StorageTerm> storageTermsForRecord = database.getStorageTermsForRecord(type, id);
+		Set<Link> linksFromRecord = database.getLinksFromRecord(type, id);
+		if ("create".equals(action)) {
+			memory.create(type, id, dataGroup, storageTermsForRecord, linksFromRecord, dataDivider);
+		}
+		if ("update".equals(action)) {
+			memory.update(type, id, dataGroup, storageTermsForRecord, linksFromRecord, dataDivider);
+		}
 	}
 }

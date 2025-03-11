@@ -1,5 +1,5 @@
 /*
- * Copyright 2021, 2022 Uppsala University Library
+ * Copyright 2021, 2022, 2025 Uppsala University Library
  *
  * This file is part of Cora.
  *
@@ -28,10 +28,14 @@ import java.lang.reflect.Modifier;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
 import se.uu.ub.cora.basicstorage.RecordStorageInMemory;
+import se.uu.ub.cora.data.DataProvider;
+import se.uu.ub.cora.data.spies.DataFactorySpy;
+import se.uu.ub.cora.data.spies.DataRecordGroupSpy;
 import se.uu.ub.cora.initialize.InitializationException;
 import se.uu.ub.cora.initialize.SettingsProvider;
 import se.uu.ub.cora.json.parser.JsonParser;
@@ -47,26 +51,55 @@ import se.uu.ub.cora.sqlstorage.internal.DatabaseStorageInstance;
 import se.uu.ub.cora.sqlstorage.spy.json.JsonParserSpy;
 import se.uu.ub.cora.sqlstorage.spy.sql.SqlDatabaseFactorySpy;
 import se.uu.ub.cora.storage.RecordStorage;
+import se.uu.ub.cora.storage.spies.RecordStorageSpy;
 import se.uu.ub.cora.testutils.mcr.MethodCallRecorder;
+import se.uu.ub.cora.testutils.mrv.MethodReturnValues;
 
 public class CachedDatabaseStorageProviderTest {
+	private static final String SOME_TYPE = "someType";
+	private static final String SOME_ID = "someId";
 	private Map<String, String> initInfo = new HashMap<>();
 	private LoggerFactorySpy loggerFactorySpy;
 	private OnlyForTestCachedDatabaseStorageInstanceProvider provider;
 	private FromDbStoragePopulatorSpy populatorSpy;
+	private RecordStorageSpy memoryStorageSpy;
+	private RecordStorageSpy databaseStorageSpy;
+	private DataFactorySpy dataFactory;
+	private DataRecordGroupSpy dataRecordGroupSpy;
 
 	@BeforeMethod
 	public void beforeMethod() {
 		setUpFactories();
+		memoryStorageSpy = new RecordStorageSpy();
+		databaseStorageSpy = setUpDatabaseStorageWithOneDataRecordGroupForRead();
+
 		DatabaseStorageInstance.setInstance(null);
 		setUpDefaultInitInfo();
 		provider = new OnlyForTestCachedDatabaseStorageInstanceProvider();
 		populatorSpy = new FromDbStoragePopulatorSpy();
 	}
 
+	private RecordStorageSpy setUpDatabaseStorageWithOneDataRecordGroupForRead() {
+		RecordStorageSpy databaseStorageSpyInt = new RecordStorageSpy();
+		dataRecordGroupSpy = new DataRecordGroupSpy();
+		dataRecordGroupSpy.MRV.setDefaultReturnValuesSupplier("getDataDivider",
+				() -> "someDataDivider");
+		databaseStorageSpyInt.MRV.setDefaultReturnValuesSupplier("read", () -> dataRecordGroupSpy);
+		return databaseStorageSpyInt;
+	}
+
 	private void setUpFactories() {
 		loggerFactorySpy = new LoggerFactorySpy();
 		LoggerProvider.setLoggerFactory(loggerFactorySpy);
+
+		dataFactory = new DataFactorySpy();
+		DataProvider.onlyForTestSetDataFactory(dataFactory);
+	}
+
+	@AfterMethod
+	private void afterMethod() {
+		LoggerProvider.setLoggerFactory(null);
+		DataProvider.onlyForTestSetDataFactory(null);
 	}
 
 	private void setUpDefaultInitInfo() {
@@ -89,7 +122,7 @@ public class CachedDatabaseStorageProviderTest {
 	}
 
 	@Test
-	public void testDatabaseRecordStorageStartedWithSqlDatabaseFactory() throws Exception {
+	public void testDatabaseRecordStorageStartedWithSqlDatabaseFactory() {
 		CachedDatabaseRecordStorage recordStorage = (CachedDatabaseRecordStorage) provider
 				.getRecordStorage();
 		DatabaseRecordStorage database = (DatabaseRecordStorage) recordStorage
@@ -102,7 +135,7 @@ public class CachedDatabaseStorageProviderTest {
 	}
 
 	@Test
-	public void testDatabaseRecordStorageStartedWithJsonParser() throws Exception {
+	public void testDatabaseRecordStorageStartedWithJsonParser() {
 		CachedDatabaseRecordStorage recordStorage = (CachedDatabaseRecordStorage) provider
 				.getRecordStorage();
 		DatabaseRecordStorage database = (DatabaseRecordStorage) recordStorage
@@ -125,8 +158,7 @@ public class CachedDatabaseStorageProviderTest {
 	private LoggerSpy getLoggerSpy() {
 		loggerFactorySpy.MCR.assertParameters("factorForClass", 0,
 				CachedDatabaseStorageInstanceProvider.class);
-		LoggerSpy logger = (LoggerSpy) loggerFactorySpy.MCR.getReturnValue("factorForClass", 0);
-		return logger;
+		return (LoggerSpy) loggerFactorySpy.MCR.getReturnValue("factorForClass", 0);
 	}
 
 	@Test(expectedExceptions = InitializationException.class)
@@ -136,7 +168,7 @@ public class CachedDatabaseStorageProviderTest {
 	}
 
 	@Test
-	public void testOnlyOneInstance() throws Exception {
+	public void testOnlyOneInstance() {
 		CachedDatabaseRecordStorage recordStorage = (CachedDatabaseRecordStorage) provider
 				.getRecordStorage();
 		CachedDatabaseRecordStorage recordStorage2 = (CachedDatabaseRecordStorage) provider
@@ -153,7 +185,7 @@ public class CachedDatabaseStorageProviderTest {
 	}
 
 	@Test
-	public void testOneStaticInstance() throws Exception {
+	public void testOneStaticInstance() {
 		CachedDatabaseRecordStorage recordStorage = (CachedDatabaseRecordStorage) provider
 				.getRecordStorage();
 		provider = new OnlyForTestCachedDatabaseStorageInstanceProvider();
@@ -163,27 +195,26 @@ public class CachedDatabaseStorageProviderTest {
 	}
 
 	@Test
-	public void testAssertParametersPassedToPopulator() throws Exception {
+	public void testAssertParametersPassedToPopulator() {
 		provider.getRecordStorage();
 
 		SqlDatabaseFactoryImp sqlDatabaseFactory = (SqlDatabaseFactoryImp) provider.MCR
-				.getValueForMethodNameAndCallNumberAndParameterName("createPopulater", 0,
+				.getParameterForMethodAndCallNumberAndParameter("createPopulater", 0,
 						"sqlDatabaseFactory");
 		String lookupName = sqlDatabaseFactory.onlyForTestGetLookupName();
 		assertEquals(lookupName, "java:/comp/env/jdbc/coraPostgres");
 
 		OrgJsonParser jsonParser = (OrgJsonParser) provider.MCR
-				.getValueForMethodNameAndCallNumberAndParameterName("createPopulater", 0,
-						"jsonParser");
+				.getParameterForMethodAndCallNumberAndParameter("createPopulater", 0, "jsonParser");
 		assertTrue(jsonParser instanceof OrgJsonParser);
 
-		var memory = populatorSpy.MCR.getValueForMethodNameAndCallNumberAndParameterName(
+		var memory = populatorSpy.MCR.getParameterForMethodAndCallNumberAndParameter(
 				"populateStorageFromDatabase", 0, "recordStorageInMemory");
 		assertTrue(memory instanceof RecordStorageInMemory);
 	}
 
 	@Test
-	public void testCreatePopulaterMethod() throws Exception {
+	public void testCreatePopulaterMethod() {
 		SqlDatabaseFactorySpy sqlDatabaseFactory = new SqlDatabaseFactorySpy();
 		JsonParserSpy jsonParser = new JsonParserSpy();
 		FromDbStoragePopulatorImp populator = (FromDbStoragePopulatorImp) provider
@@ -195,8 +226,8 @@ public class CachedDatabaseStorageProviderTest {
 	}
 
 	@Test
-	public void testCreateNonCachedDbStorage() throws Exception {
-		initInfo.put("doNotCache", "true");
+	public void testCreateNonCachedDbStorage() {
+		setDoNotCache();
 
 		DatabaseRecordStorage database = (DatabaseRecordStorage) provider.getRecordStorage();
 
@@ -208,12 +239,99 @@ public class CachedDatabaseStorageProviderTest {
 	}
 
 	@Test
-	public void testCreateCachedDbStorageWith_doNotCache_setting() throws Exception {
-		initInfo.put("doNotCache", "false");
+	public void testCreateCachedDbStorageWith_doNotCache_setting() {
+		setDoCache();
 
 		RecordStorage storage = provider.getRecordStorage();
 
 		assertTrue(storage instanceof CachedDatabaseRecordStorage);
+	}
+
+	private void setDoCache() {
+		initInfo.put("doNotCache", "false");
+	}
+
+	private void setDoNotCache() {
+		initInfo.put("doNotCache", "true");
+	}
+
+	@Test
+	public void testDataChanged_createAction_withDoCache() {
+		setDoCache();
+		var spyProvider = new OnlyForTestCachedDatabaseStorageInstanceProvider2();
+		spyProvider.getRecordStorage();
+
+		spyProvider.dataChanged(SOME_TYPE, SOME_ID, "create");
+
+		databaseStorageSpy.MCR.assertParameters("read", 0, SOME_TYPE, SOME_ID);
+		var readRecord = databaseStorageSpy.MCR.getReturnValue("read", 0);
+		var dataGroup = dataFactory.MCR
+				.assertCalledParametersReturn("factorGroupFromDataRecordGroup", readRecord);
+		var storageTerms = databaseStorageSpy.MCR
+				.assertCalledParametersReturn("getStorageTermsForRecord", SOME_TYPE, SOME_ID);
+		var links = databaseStorageSpy.MCR.assertCalledParametersReturn("getLinksFromRecord",
+				SOME_TYPE, SOME_ID);
+		memoryStorageSpy.MCR.assertParameters("create", 0, SOME_TYPE, SOME_ID, dataGroup,
+				storageTerms, links, "someDataDivider");
+		memoryStorageSpy.MCR.assertMethodNotCalled("update");
+		memoryStorageSpy.MCR.assertMethodNotCalled("deleteByTypeAndId");
+	}
+
+	@Test
+	public void testDataChanged_updateAction_withDoCache() {
+		setDoCache();
+		var spyProvider = new OnlyForTestCachedDatabaseStorageInstanceProvider2();
+		spyProvider.getRecordStorage();
+
+		spyProvider.dataChanged(SOME_TYPE, SOME_ID, "update");
+
+		databaseStorageSpy.MCR.assertParameters("read", 0, SOME_TYPE, SOME_ID);
+		var readRecord = databaseStorageSpy.MCR.getReturnValue("read", 0);
+		var dataGroup = dataFactory.MCR
+				.assertCalledParametersReturn("factorGroupFromDataRecordGroup", readRecord);
+		var storageTerms = databaseStorageSpy.MCR
+				.assertCalledParametersReturn("getStorageTermsForRecord", SOME_TYPE, SOME_ID);
+		var links = databaseStorageSpy.MCR.assertCalledParametersReturn("getLinksFromRecord",
+				SOME_TYPE, SOME_ID);
+		memoryStorageSpy.MCR.assertParameters("update", 0, SOME_TYPE, SOME_ID, dataGroup,
+				storageTerms, links, "someDataDivider");
+		memoryStorageSpy.MCR.assertMethodNotCalled("create");
+		memoryStorageSpy.MCR.assertMethodNotCalled("deleteByTypeAndId");
+	}
+
+	@Test
+	public void testDataChanged_deleteAction_withDoCache() {
+		setDoCache();
+		var spyProvider = new OnlyForTestCachedDatabaseStorageInstanceProvider2();
+		spyProvider.getRecordStorage();
+
+		spyProvider.dataChanged(SOME_TYPE, SOME_ID, "delete");
+
+		memoryStorageSpy.MCR.assertParameters("deleteByTypeAndId", 0, SOME_TYPE, SOME_ID);
+
+		databaseStorageSpy.MCR.assertMethodNotCalled("read");
+		memoryStorageSpy.MCR.assertMethodNotCalled("create");
+		memoryStorageSpy.MCR.assertMethodNotCalled("update");
+	}
+
+	@Test
+	public void testDataChanged_withDoNotCache() {
+		setDoNotCache();
+		var spyProvider = new OnlyForTestCachedDatabaseStorageInstanceProvider2();
+		spyProvider.getRecordStorage();
+
+		spyProvider.dataChanged(SOME_TYPE, SOME_ID, "create");
+		spyProvider.dataChanged(SOME_TYPE, SOME_ID, "update");
+		spyProvider.dataChanged(SOME_TYPE, SOME_ID, "delete");
+
+		assertCacheIsNotUpdated();
+	}
+
+	private void assertCacheIsNotUpdated() {
+		databaseStorageSpy.MCR.assertMethodNotCalled("read");
+		memoryStorageSpy.MCR.assertMethodNotCalled("create");
+		memoryStorageSpy.MCR.assertMethodNotCalled("update");
+		memoryStorageSpy.MCR.assertMethodNotCalled("deleteByTypeAndId");
 	}
 
 	private class OnlyForTestCachedDatabaseStorageInstanceProvider
@@ -232,6 +350,42 @@ public class CachedDatabaseStorageProviderTest {
 		protected FromDbStoragePopulator callSuperCreatePopulaterAndReturnResult(
 				SqlDatabaseFactory sqlDatabaseFactory, JsonParser jsonParser) {
 			return super.createPopulater(sqlDatabaseFactory, jsonParser);
+		}
+
+	}
+
+	private class OnlyForTestCachedDatabaseStorageInstanceProvider2
+			extends CachedDatabaseStorageInstanceProvider {
+
+		public MethodCallRecorder MCR = new MethodCallRecorder();
+		public MethodReturnValues MRV = new MethodReturnValues();
+
+		public OnlyForTestCachedDatabaseStorageInstanceProvider2() {
+			MCR.useMRV(MRV);
+			MRV.setDefaultReturnValuesSupplier("createPopulater", () -> populatorSpy);
+			MRV.setDefaultReturnValuesSupplier("createDatabaseRecordStorage",
+					() -> databaseStorageSpy);
+			MRV.setDefaultReturnValuesSupplier("createRecordStorageInMemory",
+					() -> memoryStorageSpy);
+		}
+
+		@Override
+		protected FromDbStoragePopulator createPopulater(SqlDatabaseFactory sqlDatabaseFactory,
+				JsonParser jsonParser) {
+			return (FromDbStoragePopulator) MCR.addCallAndReturnFromMRV("sqlDatabaseFactory",
+					sqlDatabaseFactory, "jsonParser", jsonParser);
+		}
+
+		@Override
+		protected RecordStorage createDatabaseRecordStorage(SqlDatabaseFactory sqlDatabaseFactory,
+				JsonParser jsonParser) {
+			return (RecordStorage) MCR.addCallAndReturnFromMRV("sqlDatabaseFactory",
+					sqlDatabaseFactory, "jsonParser", jsonParser);
+		}
+
+		@Override
+		protected RecordStorage createRecordStorageInMemory() {
+			return (RecordStorage) MCR.addCallAndReturnFromMRV();
 		}
 
 	}

@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Uppsala University Library
+ * Copyright 2022, 2025 Uppsala University Library
  *
  * This file is part of Cora.
  *
@@ -59,7 +59,7 @@ public class CachedDatabaseRecordStorageTest {
 	}
 
 	@Test
-	public void testReadSentToMemory() throws Exception {
+	public void testReadSentToMemory() {
 		memory.MRV.setDefaultReturnValuesSupplier("read", DataRecordGroupSpy::new);
 
 		DataRecordGroup result = db.read(type, id);
@@ -71,7 +71,7 @@ public class CachedDatabaseRecordStorageTest {
 	}
 
 	@Test
-	public void testOldReadSentToMemory() throws Exception {
+	public void testOldReadSentToMemory() {
 		memory.MRV.setDefaultReturnValuesSupplier("read", DataGroupSpy::new);
 		database.MRV.setDefaultReturnValuesSupplier("read", DataGroupSpy::new);
 
@@ -84,7 +84,7 @@ public class CachedDatabaseRecordStorageTest {
 	}
 
 	@Test
-	public void testCreateSentToMemoryAndDatabase() throws Exception {
+	public void testCreateSentToMemoryAndDatabase() {
 		db.create(type, id, dataRecord, storageTerms, links, dataDivider);
 
 		memory.MCR.assertParameters("create", 0, type, id, dataRecord, storageTerms, links,
@@ -95,7 +95,7 @@ public class CachedDatabaseRecordStorageTest {
 	}
 
 	@Test
-	public void testDeleteSentToMemoryAndDatabase() throws Exception {
+	public void testDeleteSentToMemoryAndDatabase() {
 		db.deleteByTypeAndId(type, id);
 
 		memory.MCR.assertParameters("deleteByTypeAndId", 0, type, id);
@@ -104,7 +104,7 @@ public class CachedDatabaseRecordStorageTest {
 	}
 
 	@Test
-	public void testUpdateSentToMemoryAndDatabase() throws Exception {
+	public void testUpdateSentToMemoryAndDatabase() {
 		db.update(type, id, dataRecord, storageTerms, links, dataDivider);
 
 		memory.MCR.assertParameters("update", 0, type, id, dataRecord, storageTerms, links,
@@ -115,7 +115,7 @@ public class CachedDatabaseRecordStorageTest {
 	}
 
 	@Test
-	public void testReadListOldSentToMemory() throws Exception {
+	public void testReadListOldSentToMemory() {
 		StorageReadResult result = db.readList(types, filter);
 
 		memory.MCR.assertParameters("readList", 0, types, filter);
@@ -125,7 +125,7 @@ public class CachedDatabaseRecordStorageTest {
 	}
 
 	@Test
-	public void testReadListSentToMemory() throws Exception {
+	public void testReadListSentToMemory() {
 		StorageReadResult result = db.readList(type, filter);
 
 		memory.MCR.assertParameters("readList", 0, type, filter);
@@ -135,7 +135,7 @@ public class CachedDatabaseRecordStorageTest {
 	}
 
 	@Test
-	public void testRecordExistsSentToMemory() throws Exception {
+	public void testRecordExistsSentToMemory() {
 		boolean result = db.recordExists(types, id);
 
 		memory.MCR.assertParameters("recordExists", 0, types, id);
@@ -145,7 +145,7 @@ public class CachedDatabaseRecordStorageTest {
 	}
 
 	@Test
-	public void testLinksExistsSentToMemory() throws Exception {
+	public void testLinksExistsSentToMemory() {
 		boolean result = db.linksExistForRecord(type, id);
 
 		memory.MCR.assertParameters("linksExistForRecord", 0, type, id);
@@ -155,7 +155,7 @@ public class CachedDatabaseRecordStorageTest {
 	}
 
 	@Test
-	public void testGetLinksToRecordSentToMemory() throws Exception {
+	public void testGetLinksToRecordSentToMemory() {
 		Set<Link> result = db.getLinksToRecord(type, id);
 
 		memory.MCR.assertParameters("getLinksToRecord", 0, type, id);
@@ -165,7 +165,27 @@ public class CachedDatabaseRecordStorageTest {
 	}
 
 	@Test
-	public void testGetTotalNumberOfRecordsForTypeSentToMemory() throws Exception {
+	public void testGetLinksFromRecordSentToMemory() {
+		Set<Link> result = db.getLinksFromRecord(type, id);
+
+		memory.MCR.assertParameters("getLinksFromRecord", 0, type, id);
+		memory.MCR.assertReturn("getLinksFromRecord", 0, result);
+
+		database.MCR.assertMethodNotCalled("getLinksFromRecord");
+	}
+
+	@Test
+	public void testGetStorageTermsForRecordSentToMemory() {
+		Set<StorageTerm> result = db.getStorageTermsForRecord(type, id);
+
+		memory.MCR.assertParameters("getStorageTermsForRecord", 0, type, id);
+		memory.MCR.assertReturn("getStorageTermsForRecord", 0, result);
+
+		database.MCR.assertMethodNotCalled("getStorageTermsForRecord");
+	}
+
+	@Test
+	public void testGetTotalNumberOfRecordsForTypeSentToMemory() {
 		long result = db.getTotalNumberOfRecordsForTypes(types, filter);
 
 		memory.MCR.assertParameters("getTotalNumberOfRecordsForTypes", 0, types, filter);

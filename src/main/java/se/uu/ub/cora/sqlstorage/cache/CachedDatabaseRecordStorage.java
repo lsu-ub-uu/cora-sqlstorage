@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Uppsala University Library
+ * Copyright 2022, 2025 Uppsala University Library
  *
  * This file is part of Cora.
  *
@@ -100,6 +100,16 @@ public class CachedDatabaseRecordStorage implements RecordStorage {
 	@Override
 	public Set<Link> getLinksToRecord(String type, String id) {
 		return memory.getLinksToRecord(type, id);
+	}
+
+	@Override
+	public Set<Link> getLinksFromRecord(String type, String id) {
+		return memory.getLinksFromRecord(type, id);
+	}
+
+	@Override
+	public Set<StorageTerm> getStorageTermsForRecord(String type, String id) {
+		return memory.getStorageTermsForRecord(type, id);
 	}
 
 	@Override

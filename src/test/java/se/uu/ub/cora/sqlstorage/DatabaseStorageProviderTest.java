@@ -80,7 +80,7 @@ public class DatabaseStorageProviderTest {
 	}
 
 	@Test
-	public void testDatabaseRecordStorageStartedWithSqlDatabaseFactory() throws Exception {
+	public void testDatabaseRecordStorageStartedWithSqlDatabaseFactory() {
 		DatabaseRecordStorage recordStorage = (DatabaseRecordStorage) provider.getRecordStorage();
 		SqlDatabaseFactoryImp sqlDatabaseFactory = (SqlDatabaseFactoryImp) recordStorage
 				.onlyForTestGetSqlDatabaseFactory();
@@ -90,7 +90,7 @@ public class DatabaseStorageProviderTest {
 	}
 
 	@Test
-	public void testDatabaseRecordStorageStartedWithJsonParser() throws Exception {
+	public void testDatabaseRecordStorageStartedWithJsonParser() {
 		DatabaseRecordStorage recordStorage = (DatabaseRecordStorage) provider.getRecordStorage();
 		JsonParser jsonParser = recordStorage.onlyForTestGetJsonParser();
 		assertTrue(jsonParser instanceof OrgJsonParser);
@@ -110,8 +110,7 @@ public class DatabaseStorageProviderTest {
 	private LoggerSpy getLoggerSpy() {
 		loggerFactorySpy.MCR.assertParameters("factorForClass", 0,
 				DatabaseStorageInstanceProvider.class);
-		LoggerSpy logger = (LoggerSpy) loggerFactorySpy.MCR.getReturnValue("factorForClass", 0);
-		return logger;
+		return (LoggerSpy) loggerFactorySpy.MCR.getReturnValue("factorForClass", 0);
 	}
 
 	@Test(expectedExceptions = InitializationException.class)
@@ -121,7 +120,7 @@ public class DatabaseStorageProviderTest {
 	}
 
 	@Test
-	public void testOnlyOneInstance() throws Exception {
+	public void testOnlyOneInstance() {
 		DatabaseRecordStorage recordStorage = (DatabaseRecordStorage) provider.getRecordStorage();
 		DatabaseRecordStorage recordStorage2 = (DatabaseRecordStorage) provider.getRecordStorage();
 		assertSame(recordStorage2, recordStorage);
@@ -136,10 +135,16 @@ public class DatabaseStorageProviderTest {
 	}
 
 	@Test
-	public void testOneStaticInstance() throws Exception {
+	public void testOneStaticInstance() {
 		DatabaseRecordStorage recordStorage = (DatabaseRecordStorage) provider.getRecordStorage();
 		provider = new DatabaseStorageInstanceProvider();
 		DatabaseRecordStorage recordStorage2 = (DatabaseRecordStorage) provider.getRecordStorage();
 		assertSame(recordStorage2, recordStorage);
+	}
+
+	@Test
+	public void testDummyCallForTestCoverageForMethodThatDoesNothing() {
+		provider.dataChanged("someType", "someId", "someAction");
+		assertTrue(true, "No implementation needed for this class");
 	}
 }
