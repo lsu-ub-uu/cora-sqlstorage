@@ -145,14 +145,31 @@ public class CachedDatabaseStorageProviderTest {
 	}
 
 	@Test
-	public void testLoggingNormalStartup() {
+	public void testLoggingNormalStartupCached() {
 		provider.getRecordStorage();
 
 		LoggerSpy logger = getLoggerSpy();
 		logger.MCR.assertParameters("logInfoUsingMessage", 0,
-				"CachedDatabaseStorageInstanceProvider starting DatabaseCachedRecordStorage...");
+				"CachedDatabaseStorageInstanceProvider starting...");
 		logger.MCR.assertParameters("logInfoUsingMessage", 1,
-				"CachedDatabaseStorageInstanceProvider started DatabaseCachedRecordStorage");
+				"starting in memory cached DatabaseRecordStorage");
+		logger.MCR.assertParameters("logInfoUsingMessage", 2,
+				"CachedDatabaseStorageInstanceProvider started");
+	}
+
+	@Test
+	public void testLoggingNormalStartupDirectDtabase() {
+		setDoNotCache();
+
+		provider.getRecordStorage();
+
+		LoggerSpy logger = getLoggerSpy();
+		logger.MCR.assertParameters("logInfoUsingMessage", 0,
+				"CachedDatabaseStorageInstanceProvider starting...");
+		logger.MCR.assertParameters("logInfoUsingMessage", 1,
+				"starting direct DatabaseRecordStorage");
+		logger.MCR.assertParameters("logInfoUsingMessage", 2,
+				"CachedDatabaseStorageInstanceProvider started");
 	}
 
 	private LoggerSpy getLoggerSpy() {

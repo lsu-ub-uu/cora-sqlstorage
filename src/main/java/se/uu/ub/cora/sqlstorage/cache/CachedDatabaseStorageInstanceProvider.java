@@ -70,11 +70,9 @@ public class CachedDatabaseStorageInstanceProvider implements RecordStorageInsta
 	}
 
 	private void logAndStartStorage() {
-		log.logInfoUsingMessage(
-				"CachedDatabaseStorageInstanceProvider starting DatabaseCachedRecordStorage...");
+		log.logInfoUsingMessage("CachedDatabaseStorageInstanceProvider starting...");
 		startStorage();
-		log.logInfoUsingMessage(
-				"CachedDatabaseStorageInstanceProvider started DatabaseCachedRecordStorage");
+		log.logInfoUsingMessage("CachedDatabaseStorageInstanceProvider started");
 	}
 
 	private void startStorage() {
@@ -97,8 +95,10 @@ public class CachedDatabaseStorageInstanceProvider implements RecordStorageInsta
 		JsonParser jsonParser = new OrgJsonParser();
 		database = createDatabaseRecordStorage(sqlDatabaseFactory, jsonParser);
 		if (doNotCache()) {
+			log.logInfoUsingMessage("starting direct DatabaseRecordStorage");
 			return database;
 		}
+		log.logInfoUsingMessage("starting in memory cached DatabaseRecordStorage");
 		memory = createRecordStorageInMemory();
 		return populateFromDatabase(sqlDatabaseFactory, jsonParser, database, memory);
 	}
@@ -135,8 +135,16 @@ public class CachedDatabaseStorageInstanceProvider implements RecordStorageInsta
 
 	@Override
 	public void dataChanged(String type, String id, String action) {
+		System.err.println("CachedDatabaseStorageInstanceProvider 0");
 		if (cacheData()) {
+			System.err.println("CachedDatabaseStorageInstanceProvider 1");
+			// try {
+			// handleDataCache(type, id, action);
+			// } catch (Exception e) {
+			// System.err.println("CachedDatabaseStorageInstanceProvider 1.1 " + e.getMessage());
+			// }
 			handleDataCache(type, id, action);
+			System.err.println("CachedDatabaseStorageInstanceProvider 2");
 		}
 	}
 
@@ -145,24 +153,42 @@ public class CachedDatabaseStorageInstanceProvider implements RecordStorageInsta
 	}
 
 	private void handleDataCache(String type, String id, String action) {
+		System.err.println("CachedDatabaseStorageInstanceProvider 3");
 		if ("delete".equals(action)) {
+			System.err.println("CachedDatabaseStorageInstanceProvider 4");
 			memory.deleteByTypeAndId(type, id);
+			System.err.println("CachedDatabaseStorageInstanceProvider 5");
 		} else {
+			System.err.println("CachedDatabaseStorageInstanceProvider 6");
 			setDataInCache(type, id, action);
+			System.err.println("CachedDatabaseStorageInstanceProvider 7");
 		}
+		System.err.println("CachedDatabaseStorageInstanceProvider 8");
 	}
 
 	private void setDataInCache(String type, String id, String action) {
+		System.err.println("CachedDatabaseStorageInstanceProvider 9");
 		DataRecordGroup dataRecordGroup = database.read(type, id);
+		System.err.println("CachedDatabaseStorageInstanceProvider 10");
 		String dataDivider = dataRecordGroup.getDataDivider();
+		System.err.println("CachedDatabaseStorageInstanceProvider 11");
 		DataGroup dataGroup = DataProvider.createGroupFromRecordGroup(dataRecordGroup);
+		System.err.println("CachedDatabaseStorageInstanceProvider 12");
 		Set<StorageTerm> storageTermsForRecord = database.getStorageTermsForRecord(type, id);
+		System.err.println("CachedDatabaseStorageInstanceProvider 13");
 		Set<Link> linksFromRecord = database.getLinksFromRecord(type, id);
+		System.err.println("CachedDatabaseStorageInstanceProvider 14");
 		if ("create".equals(action)) {
+			System.err.println("CachedDatabaseStorageInstanceProvider 15");
 			memory.create(type, id, dataGroup, storageTermsForRecord, linksFromRecord, dataDivider);
+			System.err.println("CachedDatabaseStorageInstanceProvider 16");
 		}
+		System.err.println("CachedDatabaseStorageInstanceProvider 17");
 		if ("update".equals(action)) {
+			System.err.println("CachedDatabaseStorageInstanceProvider 18");
 			memory.update(type, id, dataGroup, storageTermsForRecord, linksFromRecord, dataDivider);
+			System.err.println("CachedDatabaseStorageInstanceProvider 19");
 		}
+		System.err.println("CachedDatabaseStorageInstanceProvider 20");
 	}
 }
