@@ -44,7 +44,7 @@
 		<logger.version>2.10.0</logger.version>
 		<loggerspies.version>1.5.0</loggerspies.version>
 		<testutils.version>1.14.0</testutils.version>
-		<basicstorage.version>7.16.0</basicstorage.version>
+		<basicstorage.version>7.17.0</basicstorage.version>
 		<basicdata.version>6.0.0</basicdata.version>
 		<gatekeeper.version>5.2.0</gatekeeper.version>
 	</properties>
