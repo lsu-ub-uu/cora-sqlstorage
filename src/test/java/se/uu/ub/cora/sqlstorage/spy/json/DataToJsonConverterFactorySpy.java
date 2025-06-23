@@ -37,16 +37,14 @@ public class DataToJsonConverterFactorySpy implements DataToJsonConverterFactory
 	}
 
 	@Override
-	public DataToJsonConverter factorUsingBaseUrlAndRecordUrlAndConvertible(String baseUrl,
-			String recordUrl, Convertible convertible) {
-		// TODO Auto-generated method stub
+	public DataToJsonConverter factorUsingConvertibleAndExternalUrls(Convertible convertible,
+			ExternalUrls externalUrls) {
 		return null;
 	}
 
 	@Override
-	public DataToJsonConverter factorUsingConvertibleAndExternalUrls(Convertible convertible,
-			ExternalUrls externalUrls) {
-		// TODO Auto-generated method stub
+	public DataToJsonConverter factorUsingBaseUrlAndConvertible(String baseUrl,
+			Convertible convertible) {
 		return null;
 	}
 
