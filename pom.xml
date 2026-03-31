@@ -23,7 +23,7 @@
 	<parent>
 		<groupId>se.uu.ub.cora</groupId>
 		<artifactId>cora-parent</artifactId>
-		<version>2.7.0</version>
+		<version>3.2.0</version>
 	</parent>
 
 	<artifactId>sqlstorage</artifactId>
@@ -35,17 +35,17 @@
 	<url>http://maven.apache.org</url>
 
 	<properties>
-		<storage.version>9.8.0</storage.version>
-		<storagespies.version>1.14.0</storagespies.version>
-		<initialize.version>1.7.0</initialize.version>
-		<data.version>11.0.0</data.version>
+		<storage.version>10.0.0</storage.version>
+		<storagespies.version>1.15.0</storagespies.version>
+		<initialize.version>1.8.0</initialize.version>
+		<data.version>11.2.0</data.version>
 		<json.version>3.10.0</json.version>
-		<sqldatabase.version>7.3.0</sqldatabase.version>
+		<sqldatabase.version>7.7.0</sqldatabase.version>
 		<logger.version>2.10.0</logger.version>
 		<loggerspies.version>1.5.0</loggerspies.version>
 		<testutils.version>1.14.0</testutils.version>
-		<basicstorage.version>7.17.0</basicstorage.version>
-		<basicdata.version>7.0.0</basicdata.version>
+		<basicstorage.version>7.18.0</basicstorage.version>
+		<basicdata.version>7.2.0</basicdata.version>
 		<gatekeeper.version>5.2.0</gatekeeper.version>
 	</properties>
 

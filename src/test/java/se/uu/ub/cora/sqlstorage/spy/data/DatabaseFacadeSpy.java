@@ -70,4 +70,9 @@ public class DatabaseFacadeSpy implements DatabaseFacade {
 		MCR.addCall();
 	}
 
+	@Override
+	public void executeSql(String sql) {
+		MCR.addCall("sql", sql);
+	}
+
 }

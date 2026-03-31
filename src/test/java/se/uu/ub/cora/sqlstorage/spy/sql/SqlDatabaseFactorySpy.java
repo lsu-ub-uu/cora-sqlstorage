@@ -21,6 +21,7 @@ package se.uu.ub.cora.sqlstorage.spy.sql;
 
 import se.uu.ub.cora.sqldatabase.DatabaseFacade;
 import se.uu.ub.cora.sqldatabase.SqlDatabaseFactory;
+import se.uu.ub.cora.sqldatabase.sequence.Sequence;
 import se.uu.ub.cora.sqldatabase.table.TableFacade;
 import se.uu.ub.cora.sqldatabase.table.TableQuery;
 import se.uu.ub.cora.sqlstorage.spy.data.DatabaseFacadeSpy;
@@ -47,6 +48,7 @@ public class SqlDatabaseFactorySpy implements SqlDatabaseFactory {
 		MRV.setDefaultReturnValuesSupplier("factorDatabaseFacade", DatabaseFacadeSpy::new);
 		MRV.setDefaultReturnValuesSupplier("factorTableFacade", DatabaseFacadeSpy::new);
 		MRV.setDefaultReturnValuesSupplier("factorTableQuery", TableQuerySpy::new);
+		MRV.setDefaultReturnValuesSupplier("factorSequence", SequenceSpy::new);
 	}
 
 	@Override
@@ -75,6 +77,11 @@ public class SqlDatabaseFactorySpy implements SqlDatabaseFactory {
 	@Override
 	public TableQuery factorTableQuery(String tableName) {
 		return (TableQuery) MCR.addCallAndReturnFromMRV("tableName", tableName);
+	}
+
+	@Override
+	public Sequence factorSequence() {
+		return (Sequence) MCR.addCallAndReturnFromMRV();
 	}
 
 }
