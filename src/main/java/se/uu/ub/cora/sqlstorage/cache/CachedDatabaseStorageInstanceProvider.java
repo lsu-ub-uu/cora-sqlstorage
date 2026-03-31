@@ -72,6 +72,11 @@ public class CachedDatabaseStorageInstanceProvider implements RecordStorageInsta
 
 	private void logAndStartStorage() {
 		log.logInfoUsingMessage("CachedDatabaseStorageInstanceProvider starting...");
+		tryToStartStorage();
+		log.logInfoUsingMessage("CachedDatabaseStorageInstanceProvider started");
+	}
+
+	private void tryToStartStorage() {
 		try {
 			startStorage();
 		} catch (RuntimeException e) {
@@ -79,7 +84,6 @@ public class CachedDatabaseStorageInstanceProvider implements RecordStorageInsta
 					"CachedDatabaseStorageInstanceProvider failed to start", e);
 			throw e;
 		}
-		log.logInfoUsingMessage("CachedDatabaseStorageInstanceProvider started");
 	}
 
 	private void startStorage() {
