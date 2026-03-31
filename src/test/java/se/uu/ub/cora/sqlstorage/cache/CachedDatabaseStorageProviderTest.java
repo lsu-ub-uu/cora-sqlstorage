@@ -22,13 +22,13 @@ import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertSame;
 import static org.testng.Assert.assertTrue;
+import static org.testng.Assert.fail;
 
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
@@ -94,12 +94,6 @@ public class CachedDatabaseStorageProviderTest {
 
 		dataFactory = new DataFactorySpy();
 		DataProvider.onlyForTestSetDataFactory(dataFactory);
-	}
-
-	@AfterMethod
-	private void afterMethod() {
-		LoggerProvider.setLoggerFactory(null);
-		DataProvider.onlyForTestSetDataFactory(null);
 	}
 
 	private void setUpDefaultInitInfo() {
@@ -173,9 +167,8 @@ public class CachedDatabaseStorageProviderTest {
 	}
 
 	private LoggerSpy getLoggerSpy() {
-		loggerFactorySpy.MCR.assertParameters("factorForClass", 0,
+		return (LoggerSpy) loggerFactorySpy.MCR.assertCalledParametersReturn("factorForClass",
 				CachedDatabaseStorageInstanceProvider.class);
-		return (LoggerSpy) loggerFactorySpy.MCR.getReturnValue("factorForClass", 0);
 	}
 
 	@Test(expectedExceptions = InitializationException.class)
@@ -187,15 +180,12 @@ public class CachedDatabaseStorageProviderTest {
 	@Test
 	public void testErrorLoggingWhenStartupFails() {
 		RuntimeException startException = new RuntimeException("DB connection failed");
-		populatorSpy = new FromDbStoragePopulatorSpy() {
-			@Override
-			public void populateStorageFromDatabase(RecordStorage recordStorageInMemory) {
-				throw startException;
-			}
-		};
+
+		populatorSpy.MRV.setAlwaysThrowException("populateStorageFromDatabase", startException);
 
 		try {
 			provider.getRecordStorage();
+			fail();
 		} catch (RuntimeException e) {
 			assertSame(e, startException);
 		}
