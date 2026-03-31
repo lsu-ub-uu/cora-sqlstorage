@@ -185,6 +185,29 @@ public class CachedDatabaseStorageProviderTest {
 	}
 
 	@Test
+	public void testErrorLoggingWhenStartupFails() {
+		RuntimeException startException = new RuntimeException("DB connection failed");
+		populatorSpy = new FromDbStoragePopulatorSpy() {
+			@Override
+			public void populateStorageFromDatabase(RecordStorage recordStorageInMemory) {
+				throw startException;
+			}
+		};
+
+		try {
+			provider.getRecordStorage();
+		} catch (RuntimeException e) {
+			assertSame(e, startException);
+		}
+
+		LoggerSpy logger = getLoggerSpy();
+		logger.MCR.assertParameters("logInfoUsingMessage", 0,
+				"CachedDatabaseStorageInstanceProvider starting...");
+		logger.MCR.assertParameters("logFatalUsingMessageAndException", 0,
+				"CachedDatabaseStorageInstanceProvider failed to start", startException);
+	}
+
+	@Test
 	public void testOnlyOneInstance() {
 		CachedDatabaseRecordStorage recordStorage = (CachedDatabaseRecordStorage) provider
 				.getRecordStorage();
