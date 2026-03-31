@@ -45,6 +45,7 @@ public class CachedDatabaseStorageInstanceProvider implements RecordStorageInsta
 			.getLoggerForClass(CachedDatabaseStorageInstanceProvider.class);
 	private static final String LOOKUP_NAME = "coraDatabaseLookupName";
 	private String databaseLookupValue;
+	private boolean doNotCacheValue;
 	private RecordStorage database;
 	private RecordStorage memory;
 
@@ -71,12 +72,23 @@ public class CachedDatabaseStorageInstanceProvider implements RecordStorageInsta
 
 	private void logAndStartStorage() {
 		log.logInfoUsingMessage("CachedDatabaseStorageInstanceProvider starting...");
-		startStorage();
+		tryToStartStorage();
 		log.logInfoUsingMessage("CachedDatabaseStorageInstanceProvider started");
+	}
+
+	private void tryToStartStorage() {
+		try {
+			startStorage();
+		} catch (RuntimeException e) {
+			log.logFatalUsingMessageAndException(
+					"CachedDatabaseStorageInstanceProvider failed to start", e);
+			throw e;
+		}
 	}
 
 	private void startStorage() {
 		databaseLookupValue = SettingsProvider.getSetting(LOOKUP_NAME);
+		doNotCacheValue = readDoNotCacheSetting();
 		createDependenciesAndStartStorage();
 	}
 
@@ -112,13 +124,17 @@ public class CachedDatabaseStorageInstanceProvider implements RecordStorageInsta
 		return new RecordStorageInMemory();
 	}
 
-	private boolean doNotCache() {
+	private boolean readDoNotCacheSetting() {
 		try {
 			String setting = SettingsProvider.getSetting("doNotCache");
 			return "true".equals(setting);
 		} catch (InitializationException e) {
 			return false;
 		}
+	}
+
+	private boolean doNotCache() {
+		return doNotCacheValue;
 	}
 
 	private CachedDatabaseRecordStorage populateFromDatabase(SqlDatabaseFactory sqlDatabaseFactory,
