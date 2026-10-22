@@ -40,7 +40,7 @@
 		<initialize.version>1.8.0</initialize.version>
 		<data.version>11.2.0</data.version>
 		<json.version>3.11.0</json.version>
-		<sqldatabase.version>7.10-SNAPSHOT</sqldatabase.version>
+		<sqldatabase.version>7.10.0</sqldatabase.version>
 		<logger.version>2.10.0</logger.version>
 		<loggerspies.version>1.5.0</loggerspies.version>
 		<testutils.version>1.14.0</testutils.version>
