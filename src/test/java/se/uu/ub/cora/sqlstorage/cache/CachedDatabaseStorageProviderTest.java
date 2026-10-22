@@ -49,7 +49,7 @@ import se.uu.ub.cora.sqlstorage.DatabaseStorageInstanceProvider;
 import se.uu.ub.cora.sqlstorage.internal.DatabaseRecordStorage;
 import se.uu.ub.cora.sqlstorage.internal.DatabaseStorageInstance;
 import se.uu.ub.cora.sqlstorage.spy.json.JsonParserSpy;
-import se.uu.ub.cora.sqlstorage.spy.sql.SqlDatabaseFactorySpy;
+import se.uu.ub.cora.sqlstorage.spy.sql.OldSqlDatabaseFactorySpy;
 import se.uu.ub.cora.storage.RecordStorage;
 import se.uu.ub.cora.storage.spies.RecordStorageSpy;
 import se.uu.ub.cora.testutils.mcr.MethodCallRecorder;
@@ -245,7 +245,7 @@ public class CachedDatabaseStorageProviderTest {
 
 	@Test
 	public void testCreatePopulaterMethod() {
-		SqlDatabaseFactorySpy sqlDatabaseFactory = new SqlDatabaseFactorySpy();
+		OldSqlDatabaseFactorySpy sqlDatabaseFactory = new OldSqlDatabaseFactorySpy();
 		JsonParserSpy jsonParser = new JsonParserSpy();
 		FromDbStoragePopulatorImp populator = (FromDbStoragePopulatorImp) provider
 				.callSuperCreatePopulaterAndReturnResult(sqlDatabaseFactory, jsonParser);

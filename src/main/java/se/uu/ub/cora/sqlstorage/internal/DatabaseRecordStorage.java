@@ -1,5 +1,5 @@
 /*
- * Copyright 2021, 2022, 2023, 2025 Uppsala University Library
+ * Copyright 2021, 2022, 2023, 2025, 2026 Uppsala University Library
  *
  * This file is part of Cora.
  *
@@ -46,6 +46,7 @@ import se.uu.ub.cora.sqldatabase.SqlDataException;
 import se.uu.ub.cora.sqldatabase.SqlDatabaseException;
 import se.uu.ub.cora.sqldatabase.SqlDatabaseFactory;
 import se.uu.ub.cora.sqldatabase.SqlNotFoundException;
+import se.uu.ub.cora.sqldatabase.SqlTransactionException;
 import se.uu.ub.cora.sqldatabase.table.TableFacade;
 import se.uu.ub.cora.sqldatabase.table.TableQuery;
 import se.uu.ub.cora.storage.Condition;
@@ -173,12 +174,23 @@ public class DatabaseRecordStorage implements RecordStorage {
 	public void create(String type, String id, DataGroup dataRecord, Set<StorageTerm> storageTerms,
 			Set<Link> links, String dataDivider) {
 		try (TableFacade tableFacade = sqlDatabaseFactory.factorTableFacade()) {
-			tryToCreate(type, id, dataRecord, storageTerms, links, dataDivider, tableFacade);
+			tryCreateWithRetry(type, id, dataRecord, storageTerms, links, dataDivider, tableFacade);
 		} catch (SqlConflictException e) {
 			throw RecordConflictException.withMessageAndException(MessageFormat.format(
 					"Record with type: {0}, and id: {1} already exists in storage.", type, id), e);
 		} catch (Exception e) {
 			throw createStorageExceptionUsingAction(type, id, "creating", e);
+		}
+	}
+
+	private void tryCreateWithRetry(String type, String id, DataGroup dataRecord,
+			Set<StorageTerm> storageTerms, Set<Link> links, String dataDivider,
+			TableFacade tableFacade) throws SQLException {
+		try {
+			tryToCreate(type, id, dataRecord, storageTerms, links, dataDivider, tableFacade);
+		} catch (SqlTransactionException _) {
+			tableFacade.rollback();
+			tryCreateWithRetry(type, id, dataRecord, storageTerms, links, dataDivider, tableFacade);
 		}
 	}
 
@@ -275,17 +287,34 @@ public class DatabaseRecordStorage implements RecordStorage {
 
 	@Override
 	public void deleteByTypeAndId(String type, String id) {
-		int deletedRows = 0;
+		int deletedRows = tryToDelete(type, id);
+		throwRecordNotFoundExceptionIfAffectedRowsIsZero(type, id, deletedRows, "deleting");
+	}
+
+	private int tryToDelete(String type, String id) {
 		try (TableFacade tableFacade = sqlDatabaseFactory.factorTableFacade()) {
-			tableFacade.startTransaction();
-			createDeleteQueryForStorageTermAndAddItToTableFacade(type, id, tableFacade);
-			createDeleteQueryForLinkAndAddItToTableFacade(type, id, tableFacade);
-			deletedRows = createDeleteQueryForRecordAndAddItToTableFacade(type, id, tableFacade);
-			tableFacade.endTransaction();
+			return tryToDeleteWithRetry(type, id, tableFacade);
 		} catch (Exception e) {
 			throw createStorageExceptionUsingAction(type, id, "deleting", e);
 		}
-		throwRecordNotFoundExceptionIfAffectedRowsIsZero(type, id, deletedRows, "deleting");
+	}
+
+	private int tryToDeleteWithRetry(String type, String id, TableFacade tableFacade) {
+		try {
+			return tryToDelete(type, id, tableFacade);
+		} catch (SqlTransactionException _) {
+			tableFacade.rollback();
+			return tryToDeleteWithRetry(type, id, tableFacade);
+		}
+	}
+
+	private int tryToDelete(String type, String id, TableFacade tableFacade) {
+		tableFacade.startTransaction();
+		createDeleteQueryForStorageTermAndAddItToTableFacade(type, id, tableFacade);
+		createDeleteQueryForLinkAndAddItToTableFacade(type, id, tableFacade);
+		int deletedRows = createDeleteQueryForRecordAndAddItToTableFacade(type, id, tableFacade);
+		tableFacade.endTransaction();
+		return deletedRows;
 	}
 
 	private void createDeleteQueryForStorageTermAndAddItToTableFacade(String type, String id,
@@ -319,12 +348,24 @@ public class DatabaseRecordStorage implements RecordStorage {
 			Set<Link> links, String dataDivider) {
 		int updatedRows = 0;
 		try (TableFacade tableFacade = sqlDatabaseFactory.factorTableFacade()) {
-			updatedRows = tryToUpdate(type, id, dataRecord, storageTerms, links, dataDivider,
-					tableFacade);
+			updatedRows = tryToUpdateWithRetry(type, id, dataRecord, storageTerms, links,
+					dataDivider, tableFacade);
 		} catch (Exception e) {
 			throw createStorageExceptionUsingAction(type, id, "updating", e);
 		}
 		throwRecordNotFoundExceptionIfAffectedRowsIsZero(type, id, updatedRows, "updating");
+	}
+
+	private int tryToUpdateWithRetry(String type, String id, DataGroup dataRecord,
+			Set<StorageTerm> storageTerms, Set<Link> links, String dataDivider,
+			TableFacade tableFacade) throws SQLException {
+		try {
+			return tryToUpdate(type, id, dataRecord, storageTerms, links, dataDivider, tableFacade);
+		} catch (SqlTransactionException _) {
+			tableFacade.rollback();
+			return tryToUpdateWithRetry(type, id, dataRecord, storageTerms, links, dataDivider,
+					tableFacade);
+		}
 	}
 
 	private int tryToUpdate(String type, String id, DataGroup dataRecord,
@@ -364,7 +405,6 @@ public class DatabaseRecordStorage implements RecordStorage {
 		TableQuery tableQuery = sqlDatabaseFactory.factorTableQuery(TABLE_RECORD);
 		tableQuery.addParameter(DATA_DIVIDER_COLUMN, dataDivider);
 		PGobject jsonObject = createJsonObject(dataRecord);
-
 		tableQuery.addParameter(RECORD_DATA_COLUMN, jsonObject);
 		tableQuery.addCondition(TYPE_COLUMN, type);
 		tableQuery.addCondition(ID_COLUMN, id);
@@ -643,12 +683,10 @@ public class DatabaseRecordStorage implements RecordStorage {
 	}
 
 	public SqlDatabaseFactory onlyForTestGetSqlDatabaseFactory() {
-		// Needed for test
 		return sqlDatabaseFactory;
 	}
 
 	public JsonParser onlyForTestGetJsonParser() {
-		// Needed for test
 		return jsonParser;
 	}
 }

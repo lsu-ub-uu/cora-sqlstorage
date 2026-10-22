@@ -1,5 +1,5 @@
 /*
- * Copyright 2021, 2022, 2023, 2025 Uppsala University Library
+ * Copyright 2021, 2022, 2023, 2025, 2026 Uppsala University Library
  *
  * This file is part of Cora.
  *
@@ -30,6 +30,7 @@ import java.util.List;
 import java.util.Set;
 
 import org.postgresql.util.PGobject;
+import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
@@ -45,12 +46,15 @@ import se.uu.ub.cora.data.spies.DataGroupSpy;
 import se.uu.ub.cora.json.parser.JsonParser;
 import se.uu.ub.cora.json.parser.JsonValue;
 import se.uu.ub.cora.sqldatabase.SqlDatabaseFactory;
+import se.uu.ub.cora.sqldatabase.SqlTransactionException;
 import se.uu.ub.cora.sqlstorage.spy.json.DataToJsonConverterFactoryCreatorSpy;
 import se.uu.ub.cora.sqlstorage.spy.json.DataToJsonConverterFactorySpy;
 import se.uu.ub.cora.sqlstorage.spy.json.DataToJsonConverterSpy;
 import se.uu.ub.cora.sqlstorage.spy.json.JsonParserSpy;
 import se.uu.ub.cora.sqlstorage.spy.json.JsonToDataConverterFactorySpy;
 import se.uu.ub.cora.sqlstorage.spy.json.JsonToDataConverterSpy;
+import se.uu.ub.cora.sqlstorage.spy.sql.OldSqlDatabaseFactorySpy;
+import se.uu.ub.cora.sqlstorage.spy.sql.OldTableFacadeSpy;
 import se.uu.ub.cora.sqlstorage.spy.sql.RowSpy;
 import se.uu.ub.cora.sqlstorage.spy.sql.SqlDatabaseFactorySpy;
 import se.uu.ub.cora.sqlstorage.spy.sql.TableFacadeSpy;
@@ -71,7 +75,7 @@ public class DatabaseRecordStorageTest {
 	private static final List<String> LIST_OF_TYPES = List.of("someType1", "someType2");
 	private static final List<String> LIST_WITH_ONE_TYPE = List.of("someType");
 	private DatabaseRecordStorage storage;
-	private SqlDatabaseFactorySpy sqlDatabaseFactorySpy;
+	private OldSqlDatabaseFactorySpy sqlDatabaseFactorySpy;
 	private JsonParserSpy jsonParserSpy;
 	private JsonToDataConverterFactorySpy jsonToDataConverterFactory;
 	private Filter filter;
@@ -83,6 +87,7 @@ public class DatabaseRecordStorageTest {
 	private String someType;
 	private String someId;
 	private DataFactorySpy dataFactorySpy;
+	private int counter = 0;
 
 	@BeforeMethod
 	public void beforeMethod() {
@@ -97,7 +102,7 @@ public class DatabaseRecordStorageTest {
 		filter = new Filter();
 		emptyStorageTerms = new LinkedHashSet<>();
 		emptyLinkSet = new LinkedHashSet<>();
-		sqlDatabaseFactorySpy = new SqlDatabaseFactorySpy();
+		sqlDatabaseFactorySpy = new OldSqlDatabaseFactorySpy();
 		sqlDatabaseFactorySpy.numberOfAffectedRows = 1;
 		jsonParserSpy = new JsonParserSpy();
 		storage = new DatabaseRecordStorage(sqlDatabaseFactorySpy, jsonParserSpy);
@@ -109,10 +114,15 @@ public class DatabaseRecordStorageTest {
 		someId = "someId";
 	}
 
+	@AfterMethod
+	private void afterMethod() {
+		counter = 0;
+	}
+
 	@Test
 	public void testReadTableFacadeFactoredAndCloseCalled() {
 		storage.read("someType", "someId");
-		TableFacadeSpy tableFacadeSpy = getFirstFactoredTableFacadeSpy();
+		OldTableFacadeSpy tableFacadeSpy = getFirstFactoredTableFacadeSpy();
 		tableFacadeSpy.MCR.assertMethodWasCalled("close");
 	}
 
@@ -126,16 +136,17 @@ public class DatabaseRecordStorageTest {
 		tableQuerySpy.MCR.assertParameters("addCondition", 0, "type", "someType");
 		tableQuerySpy.MCR.assertParameters("addCondition", 1, "id", "someId");
 
-		TableFacadeSpy tableFacadeSpy = getFirstFactoredTableFacadeSpy();
+		OldTableFacadeSpy tableFacadeSpy = getFirstFactoredTableFacadeSpy();
 		tableFacadeSpy.MCR.assertParameters("readOneRowForQuery", 0, tableQuerySpy);
 	}
 
 	@Test
 	public void testReadTypeNotFound() {
 		sqlDatabaseFactorySpy.throwNotFoundExceptionFromTableFacadeOnRead = true;
+
 		try {
 			storage.read("someType", "someId");
-			fail();
+			fail("Must throw exception");
 
 		} catch (Exception e) {
 			assertTrue(e instanceof RecordNotFoundException);
@@ -151,7 +162,7 @@ public class DatabaseRecordStorageTest {
 		sqlDatabaseFactorySpy.throwDataExceptionFromTableFacadeOnRead = true;
 		try {
 			storage.read("someType", "someId");
-			fail();
+			fail("Must throw exception");
 
 		} catch (Exception e) {
 			assertTrue(e instanceof StorageException);
@@ -166,7 +177,7 @@ public class DatabaseRecordStorageTest {
 	public void testReadOkReadJsonConvertedToDataGroup() {
 		DataRecordGroup readValueFromStorage = storage.read("someType", "someId");
 
-		TableFacadeSpy tableFacade = (TableFacadeSpy) sqlDatabaseFactorySpy.MCR
+		OldTableFacadeSpy tableFacade = (OldTableFacadeSpy) sqlDatabaseFactorySpy.MCR
 				.getReturnValue("factorTableFacade", 0);
 
 		RowSpy rowSpy = (RowSpy) tableFacade.MCR.getReturnValue("readOneRowForQuery", 0);
@@ -190,7 +201,7 @@ public class DatabaseRecordStorageTest {
 	@Test
 	public void testOldReadTableFacadeFactoredAndCloseCalled() {
 		storage.read(List.of("someType", "someOtherType"), "someId");
-		TableFacadeSpy tableFacadeSpy = getFirstFactoredTableFacadeSpy();
+		OldTableFacadeSpy tableFacadeSpy = getFirstFactoredTableFacadeSpy();
 		tableFacadeSpy.MCR.assertMethodWasCalled("close");
 	}
 
@@ -205,7 +216,7 @@ public class DatabaseRecordStorageTest {
 		tableQuerySpy.MCR.assertParameters("addCondition", 0, "type", types);
 		tableQuerySpy.MCR.assertParameters("addCondition", 1, "id", "someId");
 
-		TableFacadeSpy tableFacadeSpy = getFirstFactoredTableFacadeSpy();
+		OldTableFacadeSpy tableFacadeSpy = getFirstFactoredTableFacadeSpy();
 		tableFacadeSpy.MCR.assertParameters("readOneRowForQuery", 0, tableQuerySpy);
 	}
 
@@ -214,8 +225,8 @@ public class DatabaseRecordStorageTest {
 				callNumber);
 	}
 
-	private TableFacadeSpy getFirstFactoredTableFacadeSpy() {
-		return (TableFacadeSpy) sqlDatabaseFactorySpy.MCR.getReturnValue("factorTableFacade", 0);
+	private OldTableFacadeSpy getFirstFactoredTableFacadeSpy() {
+		return (OldTableFacadeSpy) sqlDatabaseFactorySpy.MCR.getReturnValue("factorTableFacade", 0);
 	}
 
 	@Test
@@ -223,7 +234,7 @@ public class DatabaseRecordStorageTest {
 		sqlDatabaseFactorySpy.throwNotFoundExceptionFromTableFacadeOnRead = true;
 		try {
 			storage.read(List.of("someType", "someOtherType"), "someId");
-			fail();
+			fail("Must throw exception");
 
 		} catch (Exception e) {
 			assertTrue(e instanceof RecordNotFoundException);
@@ -239,7 +250,7 @@ public class DatabaseRecordStorageTest {
 		sqlDatabaseFactorySpy.throwDataExceptionFromTableFacadeOnRead = true;
 		try {
 			storage.read(List.of("someType", "someOtherType"), "someId");
-			fail();
+			fail("Must throw exception");
 
 		} catch (Exception e) {
 			assertTrue(e instanceof StorageException);
@@ -255,7 +266,7 @@ public class DatabaseRecordStorageTest {
 		DataGroup readValueFromStorage = storage.read(List.of("someType", "someOtherType"),
 				"someId");
 
-		TableFacadeSpy tableFacadeSpy = getFirstFactoredTableFacadeSpy();
+		OldTableFacadeSpy tableFacadeSpy = getFirstFactoredTableFacadeSpy();
 		RowSpy readRow = (RowSpy) tableFacadeSpy.MCR.getReturnValue("readOneRowForQuery", 0);
 		assertRowToDataGroupConvertion(0, readRow, readValueFromStorage);
 	}
@@ -321,7 +332,7 @@ public class DatabaseRecordStorageTest {
 	public void testReadListTableFacadeFactoredAndCloseCalled() {
 		storage.readList(LIST_WITH_ONE_TYPE, filter);
 
-		TableFacadeSpy tableFacadeSpy = getFirstFactoredTableFacadeSpy();
+		OldTableFacadeSpy tableFacadeSpy = getFirstFactoredTableFacadeSpy();
 		tableFacadeSpy.MCR.assertMethodWasCalled("close");
 	}
 
@@ -330,7 +341,7 @@ public class DatabaseRecordStorageTest {
 		sqlDatabaseFactorySpy.throwExceptionFromTableFacadeOnRead = true;
 		try {
 			storage.readList(LIST_OF_TYPES, filter);
-			fail();
+			fail("Must throw exception");
 		} catch (Exception e) {
 			assertTrue(e instanceof RecordNotFoundException);
 			assertEquals(e.getMessage(),
@@ -346,7 +357,7 @@ public class DatabaseRecordStorageTest {
 		sqlDatabaseFactorySpy.MCR.assertParameters("factorTableQuery", 0, "recordstorageterm");
 		TableQuerySpy tableQuerySpy = getFactoredTableQueryUsingCallNumber(0);
 
-		TableFacadeSpy tableFacadeSpy = getFirstFactoredTableFacadeSpy();
+		OldTableFacadeSpy tableFacadeSpy = getFirstFactoredTableFacadeSpy();
 		tableFacadeSpy.MCR.assertParameters("readRowsForQuery", 0, tableQuerySpy);
 		tableQuerySpy.MCR.assertParameters("addCondition", 0, "type", LIST_WITH_ONE_TYPE);
 		tableQuerySpy.MCR.assertParameter("addOrderByDesc", 0, "column", "id");
@@ -376,7 +387,7 @@ public class DatabaseRecordStorageTest {
 	public void testRealListRowToDataConvertion() {
 		StorageReadResult result = storage.readList(LIST_WITH_ONE_TYPE, filter);
 
-		TableFacadeSpy tableFacadeSpy = getFirstFactoredTableFacadeSpy();
+		OldTableFacadeSpy tableFacadeSpy = getFirstFactoredTableFacadeSpy();
 		List<?> readRows = (List<?>) tableFacadeSpy.MCR.getReturnValue("readRowsForQuery", 0);
 
 		for (int i = 0; i < readRows.size(); i++) {
@@ -490,7 +501,7 @@ public class DatabaseRecordStorageTest {
 		sqlDatabaseFactorySpy.MCR.assertParameters("factorTableQuery", 0, "recordstorageterm");
 
 		TableQuerySpy tableQuerySpy = getFactoredTableQueryUsingCallNumber(0);
-		TableFacadeSpy tableFacadeSpy = getFirstFactoredTableFacadeSpy();
+		OldTableFacadeSpy tableFacadeSpy = getFirstFactoredTableFacadeSpy();
 		tableFacadeSpy.MCR.assertParameters("readRowsForQuery", 0, tableQuerySpy);
 		tableQuerySpy.MCR.assertParameters("addCondition", 0, "type", LIST_WITH_ONE_TYPE);
 		tableQuerySpy.MCR.assertParameters("addCondition", 1, "storageKey", "someKey");
@@ -513,7 +524,7 @@ public class DatabaseRecordStorageTest {
 	}
 
 	private void assertTotalNumberOfRowsWithFilter(long totalNumberOfMatches,
-			TableFacadeSpy tableFacadeSpy, int factorTableQueryCallNum) {
+			OldTableFacadeSpy tableFacadeSpy, int factorTableQueryCallNum) {
 		sqlDatabaseFactorySpy.MCR.assertParameters("factorTableQuery", factorTableQueryCallNum,
 				"recordstorageterm");
 		TableQuerySpy tableQueryNumberOfRows = (TableQuerySpy) sqlDatabaseFactorySpy.MCR
@@ -529,7 +540,7 @@ public class DatabaseRecordStorageTest {
 	public void testGetTotalNumberOfRecordsForTypeTableFacadeFactoredAndCloseCalled() {
 		storage.getTotalNumberOfRecordsForTypes(LIST_OF_TYPES, filter);
 
-		TableFacadeSpy tableFacadeSpy = getFirstFactoredTableFacadeSpy();
+		OldTableFacadeSpy tableFacadeSpy = getFirstFactoredTableFacadeSpy();
 		tableFacadeSpy.MCR.assertMethodWasCalled("close");
 
 		TableQuerySpy tableQuerySpy0 = getFactoredTableQueryUsingCallNumber(0);
@@ -541,7 +552,7 @@ public class DatabaseRecordStorageTest {
 		sqlDatabaseFactorySpy.throwExceptionFromTableFacadeOnRead = true;
 		try {
 			storage.getTotalNumberOfRecordsForTypes(LIST_OF_TYPES, filter);
-			fail();
+			fail("Must throw exception");
 
 		} catch (Exception e) {
 			assertTrue(e instanceof RecordNotFoundException);
@@ -558,7 +569,7 @@ public class DatabaseRecordStorageTest {
 		long count = storage.getTotalNumberOfRecordsForTypes(LIST_WITH_ONE_TYPE, filter);
 
 		TableQuerySpy tableQuerySpy = getFactoredTableQueryUsingCallNumber(0);
-		TableFacadeSpy tableFacadeSpy = getFirstFactoredTableFacadeSpy();
+		OldTableFacadeSpy tableFacadeSpy = getFirstFactoredTableFacadeSpy();
 
 		sqlDatabaseFactorySpy.MCR.assertParameter("factorTableQuery", 0, "tableName",
 				"recordstorageterm");
@@ -575,7 +586,7 @@ public class DatabaseRecordStorageTest {
 		long count = storage.getTotalNumberOfRecordsForTypes(LIST_WITH_ONE_TYPE,
 				filterWithIncludePart);
 
-		TableFacadeSpy tableFacadeSpy = getFirstFactoredTableFacadeSpy();
+		OldTableFacadeSpy tableFacadeSpy = getFirstFactoredTableFacadeSpy();
 
 		assertTotalNumberOfRowsWithFilter(count, tableFacadeSpy, 0);
 
@@ -591,7 +602,7 @@ public class DatabaseRecordStorageTest {
 		storage.create("someType", "someId", tmpDataRecord, emptyStorageTerms, emptyLinkSet,
 				someDataDivider);
 
-		TableFacadeSpy tableFacadeSpy = getFirstFactoredTableFacadeSpy();
+		OldTableFacadeSpy tableFacadeSpy = getFirstFactoredTableFacadeSpy();
 		tableFacadeSpy.MCR.assertMethodWasCalled("startTransaction");
 		tableFacadeSpy.MCR.assertMethodWasCalled("endTransaction");
 		tableFacadeSpy.MCR.assertMethodWasCalled("close");
@@ -618,7 +629,7 @@ public class DatabaseRecordStorageTest {
 		assertEquals(jsonObject2.getType(), "json");
 		assertEquals(jsonObject2.getValue(), dataRecordJson);
 
-		TableFacadeSpy firstFactoredTableFacadeSpy = getFirstFactoredTableFacadeSpy();
+		OldTableFacadeSpy firstFactoredTableFacadeSpy = getFirstFactoredTableFacadeSpy();
 		firstFactoredTableFacadeSpy.MCR.assertParameters("insertRowUsingQuery", 0, tableQuerySpy);
 		firstFactoredTableFacadeSpy.MCR.assertNumberOfCallsToMethod("insertRowUsingQuery", 1);
 	}
@@ -652,7 +663,7 @@ public class DatabaseRecordStorageTest {
 		TableQuerySpy tableQuery2 = getFactoredTableQueryUsingCallNumber(2);
 		assertStorageTermAsTableQuery((StorageTerm) storageTermsArray[1], tableQuery2);
 
-		TableFacadeSpy firstFactoredTableFacadeSpy = getFirstFactoredTableFacadeSpy();
+		OldTableFacadeSpy firstFactoredTableFacadeSpy = getFirstFactoredTableFacadeSpy();
 		firstFactoredTableFacadeSpy.MCR.assertNumberOfCallsToMethod("insertRowUsingQuery", 3);
 		firstFactoredTableFacadeSpy.MCR.assertParameters("insertRowUsingQuery", 1, tableQuery1);
 		firstFactoredTableFacadeSpy.MCR.assertParameters("insertRowUsingQuery", 2, tableQuery2);
@@ -691,7 +702,7 @@ public class DatabaseRecordStorageTest {
 		TableQuerySpy tableQuery2 = getFactoredTableQueryUsingCallNumber(2);
 		assertLinkAsTableQuery((Link) links.toArray()[1], tableQuery2);
 
-		TableFacadeSpy firstFactoredTableFacadeSpy = getFirstFactoredTableFacadeSpy();
+		OldTableFacadeSpy firstFactoredTableFacadeSpy = getFirstFactoredTableFacadeSpy();
 		firstFactoredTableFacadeSpy.MCR.assertNumberOfCallsToMethod("insertRowUsingQuery", 3);
 		firstFactoredTableFacadeSpy.MCR.assertParameters("insertRowUsingQuery", 1, tableQuery1);
 		firstFactoredTableFacadeSpy.MCR.assertParameters("insertRowUsingQuery", 2, tableQuery2);
@@ -713,13 +724,35 @@ public class DatabaseRecordStorageTest {
 	}
 
 	@Test
+	public void testCreateWhenSqlTransactionException() {
+		SqlDatabaseFactorySpy sqlDatabaseFactory = new SqlDatabaseFactorySpy();
+		TableFacadeSpy tableFacade = new TableFacadeSpy();
+		sqlDatabaseFactory.MRV.setDefaultReturnValuesSupplier("factorTableFacade",
+				() -> tableFacade);
+		throwErrorInsideTransaction(sqlDatabaseFactory);
+
+		storage = new DatabaseRecordStorage(sqlDatabaseFactory, jsonParserSpy);
+
+		storage.create(someType, someId, dataRecord, emptyStorageTerms, emptyLinkSet, dataDivider);
+
+		assertTransactionRetries(tableFacade);
+	}
+
+	private void assertTransactionRetries(TableFacadeSpy tableFacade) {
+		tableFacade.MCR.assertNumberOfCallsToMethod("close", 1);
+		tableFacade.MCR.assertNumberOfCallsToMethod("rollback", 1);
+		tableFacade.MCR.assertNumberOfCallsToMethod("startTransaction", 2);
+		tableFacade.MCR.assertNumberOfCallsToMethod("endTransaction", 1);
+	}
+
+	@Test
 	public void testCreateThrowsRecordConflictException() {
 		sqlDatabaseFactorySpy.throwDuplicateExceptionFromTableFacade = true;
 
 		try {
 			storage.create(someType, someId, dataRecord, emptyStorageTerms, emptyLinkSet,
 					dataDivider);
-			fail();
+			fail("Must throw exception");
 		} catch (Exception e) {
 			assertTrue(e instanceof RecordConflictException);
 			assertEquals(e.getMessage(),
@@ -736,20 +769,19 @@ public class DatabaseRecordStorageTest {
 		try {
 			storage.create(someType, someId, dataRecord, emptyStorageTerms, emptyLinkSet,
 					dataDivider);
-			fail();
+			fail("Must throw exception");
 		} catch (Exception e) {
 			assertTrue(e instanceof StorageException);
 			assertEquals(e.getMessage(),
 					"Storage exception when creating record with recordType: someType and id: someId.");
 			assertEquals(e.getCause().getMessage(), "Error from spy");
-
 		}
 	}
 
 	@Test
 	public void testUpdateClosed() {
 		storage.update(someType, someId, dataRecord, emptyStorageTerms, emptyLinkSet, dataDivider);
-		TableFacadeSpy tableFacadeSpy = getFirstFactoredTableFacadeSpy();
+		OldTableFacadeSpy tableFacadeSpy = getFirstFactoredTableFacadeSpy();
 		tableFacadeSpy.MCR.assertMethodWasCalled("close");
 
 	}
@@ -777,7 +809,7 @@ public class DatabaseRecordStorageTest {
 		tableQuerySpy.MCR.assertParameters("addCondition", 0, "type", someType);
 		tableQuerySpy.MCR.assertParameters("addCondition", 1, "id", someId);
 
-		TableFacadeSpy tableFacadeSpy = getFirstFactoredTableFacadeSpy();
+		OldTableFacadeSpy tableFacadeSpy = getFirstFactoredTableFacadeSpy();
 		tableFacadeSpy.MCR.assertMethodWasCalled("startTransaction");
 		tableFacadeSpy.MCR.assertMethodWasCalled("endTransaction");
 		tableFacadeSpy.MCR.assertMethodWasCalled("close");
@@ -799,7 +831,7 @@ public class DatabaseRecordStorageTest {
 		deleteTableQuerySpy.MCR.assertParameters("addCondition", 0, "recordtype", "someType");
 		deleteTableQuerySpy.MCR.assertParameters("addCondition", 1, "recordid", "someId");
 
-		TableFacadeSpy firstFactoredTableFacadeSpy = getFirstFactoredTableFacadeSpy();
+		OldTableFacadeSpy firstFactoredTableFacadeSpy = getFirstFactoredTableFacadeSpy();
 		firstFactoredTableFacadeSpy.MCR.assertParameters("deleteRowsForQuery", 0,
 				deleteTableQuerySpy);
 
@@ -829,7 +861,7 @@ public class DatabaseRecordStorageTest {
 		tableQuerySpy.MCR.assertParameters("addCondition", 0, "fromtype", "someType");
 		tableQuerySpy.MCR.assertParameters("addCondition", 1, "fromid", "someId");
 
-		TableFacadeSpy firstFactoredTableFacadeSpy = getFirstFactoredTableFacadeSpy();
+		OldTableFacadeSpy firstFactoredTableFacadeSpy = getFirstFactoredTableFacadeSpy();
 		firstFactoredTableFacadeSpy.MCR.assertParameters("deleteRowsForQuery", 1, tableQuerySpy);
 
 		sqlDatabaseFactorySpy.MCR.assertNumberOfCallsToMethod("factorTableQuery", 5);
@@ -867,9 +899,30 @@ public class DatabaseRecordStorageTest {
 		tableQuerySpy.MCR.assertParameters("addCondition", 0, "type", someType);
 		tableQuerySpy.MCR.assertParameters("addCondition", 1, "id", someId);
 
-		TableFacadeSpy firstFactoredTableFacadeSpy = getFirstFactoredTableFacadeSpy();
+		OldTableFacadeSpy firstFactoredTableFacadeSpy = getFirstFactoredTableFacadeSpy();
 
 		firstFactoredTableFacadeSpy.MCR.assertParameters("updateRowsUsingQuery", 0, tableQuerySpy);
+	}
+
+	@SuppressWarnings("unchecked")
+	public static <T extends Throwable> void sneakyThrow(Throwable t) throws T {
+		throw (T) t;
+	}
+
+	@Test
+	public void testUpdateWhenSqlTransactionException() {
+		SqlDatabaseFactorySpy sqlDatabaseFactory = new SqlDatabaseFactorySpy();
+		TableFacadeSpy tableFacade = new TableFacadeSpy();
+		tableFacade.MRV.setDefaultReturnValuesSupplier("updateRowsUsingQuery", () -> 10);
+		sqlDatabaseFactory.MRV.setDefaultReturnValuesSupplier("factorTableFacade",
+				() -> tableFacade);
+		throwErrorInsideTransaction(sqlDatabaseFactory);
+
+		storage = new DatabaseRecordStorage(sqlDatabaseFactory, jsonParserSpy);
+
+		storage.update(someType, someId, dataRecord, emptyStorageTerms, emptyLinkSet, dataDivider);
+
+		assertTransactionRetries(tableFacade);
 	}
 
 	@Test
@@ -878,7 +931,7 @@ public class DatabaseRecordStorageTest {
 		try {
 			storage.update(someType, someId, dataRecord, emptyStorageTerms, emptyLinkSet,
 					dataDivider);
-			fail();
+			fail("Must throw exception");
 
 		} catch (Exception e) {
 			assertTrue(e instanceof StorageException);
@@ -895,7 +948,7 @@ public class DatabaseRecordStorageTest {
 		try {
 			storage.update(someType, someId, dataRecord, emptyStorageTerms, emptyLinkSet,
 					dataDivider);
-			fail();
+			fail("Must throw exception");
 
 		} catch (Exception e) {
 			assertTrue(e instanceof RecordNotFoundException);
@@ -916,12 +969,12 @@ public class DatabaseRecordStorageTest {
 		tableQuerySpy.MCR.assertParameters("addCondition", 0, "type", someType);
 		tableQuerySpy.MCR.assertParameters("addCondition", 1, "id", someId);
 
-		TableFacadeSpy tableFacadeSpy = getFirstFactoredTableFacadeSpy();
+		OldTableFacadeSpy tableFacadeSpy = getFirstFactoredTableFacadeSpy();
 		tableFacadeSpy.MCR.assertMethodWasCalled("startTransaction");
 		tableFacadeSpy.MCR.assertMethodWasCalled("endTransaction");
 		tableFacadeSpy.MCR.assertMethodWasCalled("close");
 
-		TableFacadeSpy firstFactoredTableFacadeSpy = getFirstFactoredTableFacadeSpy();
+		OldTableFacadeSpy firstFactoredTableFacadeSpy = getFirstFactoredTableFacadeSpy();
 		firstFactoredTableFacadeSpy.MCR.assertParameters("deleteRowsForQuery", 2, tableQuerySpy);
 	}
 
@@ -936,7 +989,7 @@ public class DatabaseRecordStorageTest {
 		tableQuerySpy.MCR.assertParameters("addCondition", 0, "recordtype", "someType");
 		tableQuerySpy.MCR.assertParameters("addCondition", 1, "recordid", "someId");
 
-		TableFacadeSpy firstFactoredTableFacadeSpy = getFirstFactoredTableFacadeSpy();
+		OldTableFacadeSpy firstFactoredTableFacadeSpy = getFirstFactoredTableFacadeSpy();
 		firstFactoredTableFacadeSpy.MCR.assertParameters("deleteRowsForQuery", 0, tableQuerySpy);
 	}
 
@@ -951,8 +1004,24 @@ public class DatabaseRecordStorageTest {
 		tableQuerySpy.MCR.assertParameters("addCondition", 0, "fromtype", "someType");
 		tableQuerySpy.MCR.assertParameters("addCondition", 1, "fromid", "someId");
 
-		TableFacadeSpy firstFactoredTableFacadeSpy = getFirstFactoredTableFacadeSpy();
+		OldTableFacadeSpy firstFactoredTableFacadeSpy = getFirstFactoredTableFacadeSpy();
 		firstFactoredTableFacadeSpy.MCR.assertParameters("deleteRowsForQuery", 1, tableQuerySpy);
+	}
+
+	@Test
+	public void testDeleteWhenSqlTransactionException() {
+		SqlDatabaseFactorySpy sqlDatabaseFactory = new SqlDatabaseFactorySpy();
+		TableFacadeSpy tableFacade = new TableFacadeSpy();
+		tableFacade.MRV.setDefaultReturnValuesSupplier("deleteRowsForQuery", () -> 10);
+		sqlDatabaseFactory.MRV.setDefaultReturnValuesSupplier("factorTableFacade",
+				() -> tableFacade);
+		throwErrorInsideTransaction(sqlDatabaseFactory);
+
+		storage = new DatabaseRecordStorage(sqlDatabaseFactory, jsonParserSpy);
+
+		storage.deleteByTypeAndId(someType, someId);
+
+		assertTransactionRetries(tableFacade);
 	}
 
 	@Test
@@ -961,7 +1030,7 @@ public class DatabaseRecordStorageTest {
 
 		try {
 			storage.deleteByTypeAndId("someType", "someId");
-			fail();
+			fail("Must throw exception");
 		} catch (Exception e) {
 			assertTrue(e instanceof StorageException);
 			assertEquals(e.getMessage(),
@@ -974,7 +1043,7 @@ public class DatabaseRecordStorageTest {
 	@Test
 	public void testDeletedClosed() {
 		storage.deleteByTypeAndId("someType", "someId");
-		TableFacadeSpy tableFacadeSpy = getFirstFactoredTableFacadeSpy();
+		OldTableFacadeSpy tableFacadeSpy = getFirstFactoredTableFacadeSpy();
 		tableFacadeSpy.MCR.assertMethodWasCalled("close");
 	}
 
@@ -984,7 +1053,7 @@ public class DatabaseRecordStorageTest {
 
 		try {
 			storage.deleteByTypeAndId("someType", "someId");
-			fail();
+			fail("Must throw exception");
 
 		} catch (Exception e) {
 			assertTrue(e instanceof RecordNotFoundException);
@@ -1005,14 +1074,14 @@ public class DatabaseRecordStorageTest {
 		tableQuerySpy.MCR.assertParameters("addCondition", 0, "totype", someType);
 		tableQuerySpy.MCR.assertParameters("addCondition", 1, "toid", someId);
 
-		TableFacadeSpy tableFacadeSpy = getFirstFactoredTableFacadeSpy();
+		OldTableFacadeSpy tableFacadeSpy = getFirstFactoredTableFacadeSpy();
 		tableFacadeSpy.MCR.assertParameters("readNumberOfRows", 0, tableQuerySpy);
 	}
 
 	@Test
 	public void testLinksExistForRecordDatabaseIsClosed() {
 		storage.linksExistForRecord("someType", "someId");
-		TableFacadeSpy tableFacadeSpy = getFirstFactoredTableFacadeSpy();
+		OldTableFacadeSpy tableFacadeSpy = getFirstFactoredTableFacadeSpy();
 		tableFacadeSpy.MCR.assertMethodWasCalled("close");
 	}
 
@@ -1022,7 +1091,7 @@ public class DatabaseRecordStorageTest {
 
 		try {
 			storage.linksExistForRecord("someType", "someId");
-			fail();
+			fail("Must throw exception");
 
 		} catch (Exception e) {
 			assertTrue(e instanceof StorageException);
@@ -1070,7 +1139,7 @@ public class DatabaseRecordStorageTest {
 		tableQuerySpy.MCR.assertParameters("addCondition", 0, "totype", someType);
 		tableQuerySpy.MCR.assertParameters("addCondition", 1, "toid", someId);
 
-		TableFacadeSpy tableFacadeSpy = getFirstFactoredTableFacadeSpy();
+		OldTableFacadeSpy tableFacadeSpy = getFirstFactoredTableFacadeSpy();
 		tableFacadeSpy.MCR.assertParameters("readRowsForQuery", 0, tableQuerySpy);
 
 		List<RowSpy> rows = (List<RowSpy>) tableFacadeSpy.MCR.getReturnValue("readRowsForQuery", 0);
@@ -1097,7 +1166,7 @@ public class DatabaseRecordStorageTest {
 	@Test
 	public void testGetLinksToRecordDatabaseIsClosed() {
 		storage.getLinksToRecord("someType", "someId");
-		TableFacadeSpy tableFacadeSpy = getFirstFactoredTableFacadeSpy();
+		OldTableFacadeSpy tableFacadeSpy = getFirstFactoredTableFacadeSpy();
 		tableFacadeSpy.MCR.assertMethodWasCalled("close");
 	}
 
@@ -1107,7 +1176,7 @@ public class DatabaseRecordStorageTest {
 
 		try {
 			storage.getLinksToRecord("someType", "someId");
-			fail();
+			fail("Must throw exception");
 
 		} catch (Exception e) {
 			assertTrue(e instanceof StorageException);
@@ -1136,7 +1205,7 @@ public class DatabaseRecordStorageTest {
 		tableQuerySpy.MCR.assertParameters("addCondition", 0, "fromtype", someType);
 		tableQuerySpy.MCR.assertParameters("addCondition", 1, "fromid", someId);
 
-		TableFacadeSpy tableFacadeSpy = getFirstFactoredTableFacadeSpy();
+		OldTableFacadeSpy tableFacadeSpy = getFirstFactoredTableFacadeSpy();
 		tableFacadeSpy.MCR.assertParameters("readRowsForQuery", 0, tableQuerySpy);
 
 		List<RowSpy> rows = (List<RowSpy>) tableFacadeSpy.MCR.getReturnValue("readRowsForQuery", 0);
@@ -1163,7 +1232,7 @@ public class DatabaseRecordStorageTest {
 	@Test
 	public void testGetLinksFromRecordDatabaseIsClosed() {
 		storage.getLinksFromRecord("someType", "someId");
-		TableFacadeSpy tableFacadeSpy = getFirstFactoredTableFacadeSpy();
+		OldTableFacadeSpy tableFacadeSpy = getFirstFactoredTableFacadeSpy();
 		tableFacadeSpy.MCR.assertMethodWasCalled("close");
 	}
 
@@ -1173,7 +1242,7 @@ public class DatabaseRecordStorageTest {
 
 		try {
 			storage.getLinksFromRecord("someType", "someId");
-			fail();
+			fail("Must throw exception");
 
 		} catch (Exception e) {
 			assertTrue(e instanceof StorageException);
@@ -1192,7 +1261,7 @@ public class DatabaseRecordStorageTest {
 	public void testRecordExists_TableFacadeFactoredAndCloseCalled() {
 		assertFalse(storage.recordExists(LIST_WITH_ONE_TYPE, "someId"));
 
-		TableFacadeSpy tableFacadeSpy = getFirstFactoredTableFacadeSpy();
+		OldTableFacadeSpy tableFacadeSpy = getFirstFactoredTableFacadeSpy();
 		tableFacadeSpy.MCR.assertMethodWasCalled("close");
 	}
 
@@ -1201,7 +1270,7 @@ public class DatabaseRecordStorageTest {
 		sqlDatabaseFactorySpy.throwExceptionFromTableFacadeOnRead = true;
 		try {
 			assertFalse(storage.recordExists(LIST_OF_TYPES, "someId"));
-			fail();
+			fail("Must throw exception");
 
 		} catch (Exception e) {
 			assertTrue(e instanceof RecordNotFoundException);
@@ -1218,7 +1287,7 @@ public class DatabaseRecordStorageTest {
 		boolean recordExists = storage.recordExists(LIST_WITH_ONE_TYPE, "someId");
 
 		TableQuerySpy tableQuerySpy = getFactoredTableQueryUsingCallNumber(0);
-		TableFacadeSpy tableFacadeSpy = getFirstFactoredTableFacadeSpy();
+		OldTableFacadeSpy tableFacadeSpy = getFirstFactoredTableFacadeSpy();
 
 		sqlDatabaseFactorySpy.MCR.assertParameter("factorTableQuery", 0, "tableName", "record");
 
@@ -1255,7 +1324,7 @@ public class DatabaseRecordStorageTest {
 		tableQuerySpy.MCR.assertParameters("addCondition", 0, "recordtype", someType);
 		tableQuerySpy.MCR.assertParameters("addCondition", 1, "recordid", someId);
 
-		TableFacadeSpy tableFacadeSpy = getFirstFactoredTableFacadeSpy();
+		OldTableFacadeSpy tableFacadeSpy = getFirstFactoredTableFacadeSpy();
 		tableFacadeSpy.MCR.assertParameters("readRowsForQuery", 0, tableQuerySpy);
 
 		List<RowSpy> rows = (List<RowSpy>) tableFacadeSpy.MCR.getReturnValue("readRowsForQuery", 0);
@@ -1287,7 +1356,7 @@ public class DatabaseRecordStorageTest {
 	@Test
 	public void testGetStorageTermsForRecordDatabaseIsClosed() {
 		storage.getStorageTermsForRecord("someType", "someId");
-		TableFacadeSpy tableFacadeSpy = getFirstFactoredTableFacadeSpy();
+		OldTableFacadeSpy tableFacadeSpy = getFirstFactoredTableFacadeSpy();
 		tableFacadeSpy.MCR.assertMethodWasCalled("close");
 	}
 
@@ -1297,13 +1366,28 @@ public class DatabaseRecordStorageTest {
 
 		try {
 			storage.getStorageTermsForRecord("someType", "someId");
-			fail();
+			fail("Must throw exception");
 		} catch (Exception e) {
 			assertTrue(e instanceof StorageException);
 			assertEquals(e.getMessage(),
 					"Could not get storageTerms for type: someType and id: someId.");
 			assertTrue(e.getCause() instanceof Exception);
 		}
+	}
+
+	private void throwErrorInsideTransaction(SqlDatabaseFactorySpy sqlDatabaseFactory) {
+		// Note: We throw the fake exception on sqlDatabaseFactory since we do not have the
+		// possibility to throw it on any of the tableFacade operations used by create transaction.
+		sqlDatabaseFactory.MRV.setDefaultReturnValuesSupplier("factorTableQuery",
+				this::thowExceptionOnFirstCall);
+	}
+
+	private TableQuerySpy thowExceptionOnFirstCall() {
+		counter++;
+		if (counter == 1) {
+			throw SqlTransactionException.withMessage("someMessage");
+		}
+		return new TableQuerySpy();
 	}
 
 }
