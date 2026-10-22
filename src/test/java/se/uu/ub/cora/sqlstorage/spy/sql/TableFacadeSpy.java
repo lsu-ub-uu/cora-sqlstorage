@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 Uppsala University Library
+ * Copyright 2026 Uppsala University Library
  *
  * This file is part of Cora.
  *
@@ -18,154 +18,62 @@
  */
 package se.uu.ub.cora.sqlstorage.spy.sql;
 
-import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 import se.uu.ub.cora.sqldatabase.Row;
-import se.uu.ub.cora.sqldatabase.SqlConflictException;
-import se.uu.ub.cora.sqldatabase.SqlDataException;
-import se.uu.ub.cora.sqldatabase.SqlDatabaseException;
-import se.uu.ub.cora.sqldatabase.SqlNotFoundException;
 import se.uu.ub.cora.sqldatabase.table.TableFacade;
 import se.uu.ub.cora.sqldatabase.table.TableQuery;
 import se.uu.ub.cora.testutils.mcr.MethodCallRecorder;
+import se.uu.ub.cora.testutils.mrv.MethodReturnValues;
 
 public class TableFacadeSpy implements TableFacade {
 	public MethodCallRecorder MCR = new MethodCallRecorder();
-	public boolean throwExceptionOnRead = false;
-	public boolean throwNotFoundExceptionOnRead = false;
-	public boolean throwDataExceptionOnRead = false;
-	public boolean throwExceptionOnUpdate = false;
-	public boolean throwExceptionOnDelete = false;
-	public long totalNumberOfRecordsForType = 0;
-	public boolean throwDuplicateException = false;
-	public boolean throwSqlException = false;
-	public int numberOfAffectedRows = 0;
-	public boolean usingTransaction = false;
+	public MethodReturnValues MRV = new MethodReturnValues();
 
-	@Override
-	public void close() {
-		MCR.addCall();
+	public TableFacadeSpy() {
+		MCR.useMRV(MRV);
+		MRV.setDefaultReturnValuesSupplier("readRowsForQuery", Collections::emptyList);
+		MRV.setDefaultReturnValuesSupplier("readOneRowForQuery", RowSpy::new);
+		MRV.setDefaultReturnValuesSupplier("readNumberOfRows", () -> 0L);
+		MRV.setDefaultReturnValuesSupplier("updateRowsUsingQuery", () -> 0);
+		MRV.setDefaultReturnValuesSupplier("deleteRowsForQuery", () -> 0);
+		MRV.setDefaultReturnValuesSupplier("nextValueFromSequence", () -> 0L);
 	}
 
 	@Override
 	public void insertRowUsingQuery(TableQuery tableQuery) {
 		MCR.addCall("tableQuery", tableQuery);
-		if (throwDuplicateException) {
-			throw SqlConflictException.withMessage("Error from insertRowUsingQuery in tablespy");
-		}
-		if (throwSqlException) {
-			throw SqlDatabaseException.withMessage("Error from spy");
-		}
-		if (usingTransaction && startTransactionNotCalled()) {
-			throw new RuntimeException(
-					"Error from SPY. StartTransaction should be called before insertRowUsingQuery. Controll the order of start end transaction.");
-		}
-		if (usingTransaction && MCR.methodWasCalled("endTransaction")) {
-			throw new RuntimeException(
-					"Error from SPY. endTransaction has been called before insertRowUsingQuery. Controll the order of start end transaction.");
-		}
-
 	}
 
 	@Override
 	public List<Row> readRowsForQuery(TableQuery tableQuery) {
-		MCR.addCall("tableQuery", tableQuery);
-		if (throwExceptionOnRead) {
-			throw SqlDatabaseException.withMessage("Error from readRowsForQuery in tablespy");
-		}
-		List<Row> listResult = new ArrayList<>();
-		if (totalNumberOfRecordsForType > 0) {
-			RowSpy result = new RowSpy();
-			result.MRV.setDefaultReturnValuesSupplier("getValueByColumn",
-					() -> "some value from getValueByColumn in rowSpy1");
-			RowSpy result2 = new RowSpy();
-			result2.MRV.setDefaultReturnValuesSupplier("getValueByColumn",
-					() -> "some value from getValueByColumn in rowSpy2");
-			RowSpy result3 = new RowSpy();
-			result3.MRV.setDefaultReturnValuesSupplier("getValueByColumn",
-					() -> "some value from getValueByColumn in rowSpy3");
-			listResult.add(result);
-			listResult.add(result2);
-			listResult.add(result3);
-		}
-
-		MCR.addReturned(listResult);
-		return listResult;
+		return (List<Row>) MCR.addCallAndReturnFromMRV("tableQuery", tableQuery);
 	}
 
 	@Override
 	public Row readOneRowForQuery(TableQuery tableQuery) {
-		MCR.addCall("tableQuery", tableQuery);
-		if (throwExceptionOnRead) {
-			throw SqlDatabaseException.withMessage("Error from readOneRowForQuery in tablespy");
-		}
-		if (throwNotFoundExceptionOnRead) {
-			throw SqlNotFoundException
-					.withMessage("Not found error from readOneRowForQuery in tablespy");
-		}
-		if (throwDataExceptionOnRead) {
-			throw SqlDataException.withMessage("Data error from readOneRowForQuery in tablespy");
-		}
-		RowSpy result = new RowSpy();
-
-		MCR.addReturned(result);
-		return result;
+		return (Row) MCR.addCallAndReturnFromMRV("tableQuery", tableQuery);
 	}
 
 	@Override
 	public long readNumberOfRows(TableQuery tableQuery) {
-		MCR.addCall("tableQuery", tableQuery);
-		if (throwExceptionOnRead) {
-			throw SqlDatabaseException.withMessage("Error from readNumberOfRows in tablespy");
-		}
-		MCR.addReturned(totalNumberOfRecordsForType);
-		return totalNumberOfRecordsForType;
+		return (long) MCR.addCallAndReturnFromMRV("tableQuery", tableQuery);
 	}
 
 	@Override
 	public int updateRowsUsingQuery(TableQuery tableQuery) {
-		MCR.addCall("tableQuery", tableQuery);
-
-		if (throwExceptionOnUpdate) {
-			throw SqlDatabaseException.withMessage("Error from updateRowsUsingQuery in tablespy");
-		}
-		if (throwDuplicateException) {
-			throw SqlConflictException.withMessage("Error from updateRowsUsingQuery in tablespy");
-		}
-		if (usingTransaction && MCR.methodWasCalled("endTransaction")) {
-			throw new RuntimeException(
-					"Error from SPY. endTransaction has been called before updateRowsUsingQuery. Controll the order of start end transaction.");
-		}
-
-		MCR.addReturned(numberOfAffectedRows);
-		return numberOfAffectedRows;
+		return (int) MCR.addCallAndReturnFromMRV("tableQuery", tableQuery);
 	}
 
 	@Override
 	public int deleteRowsForQuery(TableQuery tableQuery) {
-		MCR.addCall("tableQuery", tableQuery);
-		if (throwExceptionOnDelete) {
-			throw SqlDatabaseException.withMessage("Error from deleteRowsUsingQuery in tablespy");
-		}
-		if (usingTransaction && startTransactionNotCalled()) {
-			throw new RuntimeException(
-					"Error from SPY. StartTransaction should be called before insertRowUsingQuery. Controll the order of start end transaction.");
-		}
-		if (usingTransaction && MCR.methodWasCalled("endTransaction")) {
-			throw new RuntimeException(
-					"Error from SPY. endTransaction has been called before deleteRowsForQuery. Controll the order of start end transaction.");
-		}
-		MCR.addReturned(numberOfAffectedRows);
-		return numberOfAffectedRows;
+		return (int) MCR.addCallAndReturnFromMRV("tableQuery", tableQuery);
 	}
 
 	@Override
 	public long nextValueFromSequence(String sequenceName) {
-		MCR.addCall("sequenceName", sequenceName);
-		long result = 0L;
-		MCR.addReturned(result);
-		return result;
+		return (long) MCR.addCallAndReturnFromMRV("sequenceName", sequenceName);
 	}
 
 	@Override
@@ -176,18 +84,15 @@ public class TableFacadeSpy implements TableFacade {
 	@Override
 	public void endTransaction() {
 		MCR.addCall();
-		if (startTransactionNotCalled()) {
-			throw new RuntimeException(
-					"Error from SPY. StartTransaction should be called before endTransaction. Controll the order of start end transaction.");
-		}
-	}
-
-	private boolean startTransactionNotCalled() {
-		return !MCR.methodWasCalled("startTransaction");
 	}
 
 	@Override
 	public void rollback() {
+		MCR.addCall();
+	}
+
+	@Override
+	public void close() {
 		MCR.addCall();
 	}
 }

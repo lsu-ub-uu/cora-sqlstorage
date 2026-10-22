@@ -29,24 +29,14 @@ import se.uu.ub.cora.testutils.mcr.MethodCallRecorder;
 import se.uu.ub.cora.testutils.mrv.MethodReturnValues;
 
 public class SqlDatabaseFactorySpy implements SqlDatabaseFactory {
-	public boolean throwExceptionFromTableFacadeOnRead = false;
-	public boolean throwNotFoundExceptionFromTableFacadeOnRead = false;
-	public boolean throwDataExceptionFromTableFacadeOnRead = false;
-	public boolean throwExceptionFromTableFacadeOnUpdate = false;
-	public boolean throwExceptionFromTableFacadeOnDelete = false;
-	public long totalNumberOfRecordsForType = 0;
-	public boolean throwDuplicateExceptionFromTableFacade = false;
-	public boolean throwSqlExceptionFromTableFacade = false;
-	public int numberOfAffectedRows = 0;
-	public boolean usingTransaction = false;
-
 	public MethodCallRecorder MCR = new MethodCallRecorder();
 	public MethodReturnValues MRV = new MethodReturnValues();
 
 	public SqlDatabaseFactorySpy() {
 		MCR.useMRV(MRV);
+
 		MRV.setDefaultReturnValuesSupplier("factorDatabaseFacade", DatabaseFacadeSpy::new);
-		MRV.setDefaultReturnValuesSupplier("factorTableFacade", DatabaseFacadeSpy::new);
+		MRV.setDefaultReturnValuesSupplier("factorTableFacade", TableFacadeSpy::new);
 		MRV.setDefaultReturnValuesSupplier("factorTableQuery", TableQuerySpy::new);
 		MRV.setDefaultReturnValuesSupplier("factorSequence", SequenceSpy::new);
 	}
@@ -58,20 +48,8 @@ public class SqlDatabaseFactorySpy implements SqlDatabaseFactory {
 
 	@Override
 	public TableFacade factorTableFacade() {
-		MCR.addCall();
-		TableFacadeSpy tableFacadeSpy = new TableFacadeSpy();
-		tableFacadeSpy.throwExceptionOnRead = throwExceptionFromTableFacadeOnRead;
-		tableFacadeSpy.throwNotFoundExceptionOnRead = throwNotFoundExceptionFromTableFacadeOnRead;
-		tableFacadeSpy.throwDataExceptionOnRead = throwDataExceptionFromTableFacadeOnRead;
-		tableFacadeSpy.throwExceptionOnUpdate = throwExceptionFromTableFacadeOnUpdate;
-		tableFacadeSpy.throwExceptionOnDelete = throwExceptionFromTableFacadeOnDelete;
-		tableFacadeSpy.throwDuplicateException = throwDuplicateExceptionFromTableFacade;
-		tableFacadeSpy.throwSqlException = throwSqlExceptionFromTableFacade;
-		tableFacadeSpy.totalNumberOfRecordsForType = totalNumberOfRecordsForType;
-		tableFacadeSpy.numberOfAffectedRows = numberOfAffectedRows;
-		tableFacadeSpy.usingTransaction = usingTransaction;
-		MCR.addReturned(tableFacadeSpy);
-		return tableFacadeSpy;
+		return (TableFacade) MCR.addCallAndReturnFromMRV();
+
 	}
 
 	@Override
