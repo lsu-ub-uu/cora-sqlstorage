@@ -1,5 +1,5 @@
 /*
- * Copyright 2022, 2025 Uppsala University Library
+ * Copyright 2022, 2025, 2026 Uppsala University Library
  *
  * This file is part of Cora.
  *
@@ -66,7 +66,6 @@ public class CachedDatabaseRecordStorage implements RecordStorage {
 	public void deleteByTypeAndId(String type, String id) {
 		database.deleteByTypeAndId(type, id);
 		memory.deleteByTypeAndId(type, id);
-
 	}
 
 	@Override
@@ -74,7 +73,13 @@ public class CachedDatabaseRecordStorage implements RecordStorage {
 			Set<Link> links, String dataDivider) {
 		database.update(type, id, dataRecord, storageTerms, links, dataDivider);
 		memory.update(type, id, dataRecord, storageTerms, links, dataDivider);
+	}
 
+	@Override
+	public void updateCollectedData(String type, String id, Set<StorageTerm> storageTerms,
+			Set<Link> links, String dataDivider) {
+		database.updateCollectedData(type, id, storageTerms, links, dataDivider);
+		memory.updateCollectedData(type, id, storageTerms, links, dataDivider);
 	}
 
 	@Override

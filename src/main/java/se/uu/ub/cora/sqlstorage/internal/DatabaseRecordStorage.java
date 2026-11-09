@@ -391,6 +391,40 @@ public class DatabaseRecordStorage implements RecordStorage {
 		return updatedRows;
 	}
 
+	@Override
+	public void updateCollectedData(String type, String id, Set<StorageTerm> storageTerms,
+			Set<Link> links, String dataDivider) {
+		try (TableFacade tableFacade = sqlDatabaseFactory.factorTableFacade()) {
+			tryToUpdateCollectedDataWithRetry(type, id, storageTerms, links, dataDivider,
+					tableFacade);
+		} catch (Exception e) {
+			throw createStorageExceptionUsingAction(type, id, "updating collected data", e);
+		}
+	}
+
+	private void tryToUpdateCollectedDataWithRetry(String type, String id,
+			Set<StorageTerm> storageTerms, Set<Link> links, String dataDivider,
+			TableFacade tableFacade) throws SQLException {
+		try {
+			tryToUpdateCollectedData(type, id, storageTerms, links, tableFacade);
+		} catch (SqlTransactionException _) {
+			tableFacade.rollback();
+			tryToUpdateCollectedDataWithRetry(type, id, storageTerms, links, dataDivider,
+					tableFacade);
+		}
+	}
+
+	private void tryToUpdateCollectedData(String type, String id, Set<StorageTerm> storageTerms,
+			Set<Link> links, TableFacade tableFacade) {
+		tableFacade.startTransaction();
+		createDeleteQueryForStorageTermAndAddItToTableFacade(type, id, tableFacade);
+		createDeleteQueryForLinkAndAddItToTableFacade(type, id, tableFacade);
+		createCreateQueriesForStorageTermsAndAddThemToTableFacade(type, id, storageTerms,
+				tableFacade);
+		createCreateQueriesForLinksAndAddThemToTableFacade(type, id, links, tableFacade);
+		tableFacade.endTransaction();
+	}
+
 	private void throwRecordNotFoundExceptionIfAffectedRowsIsZero(String type, String id,
 			int affectedRows, String storageAction) {
 		if (affectedRows == 0) {

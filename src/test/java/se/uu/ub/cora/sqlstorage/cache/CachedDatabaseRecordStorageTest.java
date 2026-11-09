@@ -1,5 +1,5 @@
 /*
- * Copyright 2022, 2025 Uppsala University Library
+ * Copyright 2022, 2025, 2026 Uppsala University Library
  *
  * This file is part of Cora.
  *
@@ -111,6 +111,17 @@ public class CachedDatabaseRecordStorageTest {
 				dataDivider);
 
 		database.MCR.assertParameters("update", 0, type, id, dataRecord, storageTerms, links,
+				dataDivider);
+	}
+
+	@Test
+	public void testUpdateCollectedDataSentToMemoryAndDatabase() {
+		db.updateCollectedData(type, id, storageTerms, links, dataDivider);
+
+		memory.MCR.assertParameters("updateCollectedData", 0, type, id, storageTerms, links,
+				dataDivider);
+
+		database.MCR.assertParameters("updateCollectedData", 0, type, id, storageTerms, links,
 				dataDivider);
 	}
 

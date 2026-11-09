@@ -783,7 +783,6 @@ public class DatabaseRecordStorageTest {
 		storage.update(someType, someId, dataRecord, emptyStorageTerms, emptyLinkSet, dataDivider);
 		OldTableFacadeSpy tableFacadeSpy = getFirstFactoredTableFacadeSpy();
 		tableFacadeSpy.MCR.assertMethodWasCalled("close");
-
 	}
 
 	@Test
@@ -955,6 +954,142 @@ public class DatabaseRecordStorageTest {
 			assertEquals(e.getMessage(),
 					"Record not found when updating record with recordType: someType and id: someId.");
 		}
+	}
+
+	@Test
+	public void testUpdateCollectedDataClosed() {
+		storage.updateCollectedData(someType, someId, emptyStorageTerms, emptyLinkSet, dataDivider);
+		OldTableFacadeSpy tableFacadeSpy = getFirstFactoredTableFacadeSpy();
+		tableFacadeSpy.MCR.assertMethodWasCalled("close");
+	}
+
+	@Test
+	public void testUpdateCollectedDataParametersAssertRecord() {
+		sqlDatabaseFactorySpy.usingTransaction = true;
+
+		storage.updateCollectedData(someType, someId, emptyStorageTerms, emptyLinkSet, dataDivider);
+
+		OldTableFacadeSpy tableFacadeSpy = getFirstFactoredTableFacadeSpy();
+		tableFacadeSpy.MCR.assertMethodWasCalled("startTransaction");
+		tableFacadeSpy.MCR.assertMethodWasCalled("endTransaction");
+		tableFacadeSpy.MCR.assertMethodWasCalled("close");
+
+		tableFacadeSpy.MCR.assertNumberOfCallsToMethod("deleteRowsForQuery", 2);
+		tableFacadeSpy.MCR.assertNumberOfCallsToMethod("insertRowUsingQuery", 0);
+	}
+
+	@Test
+	public void testUpdateCollectedDataAssertStoragTerm() {
+		sqlDatabaseFactorySpy.usingTransaction = true;
+		Set<StorageTerm> storageTerms = createStorageTerms();
+
+		storage.updateCollectedData(someType, someId, storageTerms, emptyLinkSet, dataDivider);
+
+		sqlDatabaseFactorySpy.MCR.assertParameters("factorTableQuery", 0, "storageterm");
+		TableQuerySpy deleteTableQuerySpy = getFactoredTableQueryUsingCallNumber(0);
+		deleteTableQuerySpy.MCR.assertParameters("addCondition", 0, "recordtype", "someType");
+		deleteTableQuerySpy.MCR.assertParameters("addCondition", 1, "recordid", "someId");
+
+		OldTableFacadeSpy firstFactoredTableFacadeSpy = getFirstFactoredTableFacadeSpy();
+		firstFactoredTableFacadeSpy.MCR.assertParameters("deleteRowsForQuery", 0,
+				deleteTableQuerySpy);
+
+		sqlDatabaseFactorySpy.MCR.assertNumberOfCallsToMethod("factorTableQuery", 4);
+		sqlDatabaseFactorySpy.MCR.assertParameters("factorTableQuery", 2, "storageterm");
+		sqlDatabaseFactorySpy.MCR.assertParameters("factorTableQuery", 3, "storageterm");
+		TableQuerySpy tableQuery1 = getFactoredTableQueryUsingCallNumber(2);
+		Object[] storageTermsArray = storageTerms.toArray();
+		assertStorageTermAsTableQuery((StorageTerm) storageTermsArray[0], tableQuery1);
+
+		TableQuerySpy tableQuery2 = getFactoredTableQueryUsingCallNumber(3);
+		assertStorageTermAsTableQuery((StorageTerm) storageTermsArray[1], tableQuery2);
+
+		firstFactoredTableFacadeSpy.MCR.assertNumberOfCallsToMethod("insertRowUsingQuery", 2);
+		firstFactoredTableFacadeSpy.MCR.assertParameters("insertRowUsingQuery", 0, tableQuery1);
+		firstFactoredTableFacadeSpy.MCR.assertParameters("insertRowUsingQuery", 1, tableQuery2);
+	}
+
+	@Test
+	public void testUpdateCollectedDataAssertLink() {
+		sqlDatabaseFactorySpy.usingTransaction = true;
+		Set<Link> links = createLinks();
+		storage.updateCollectedData(someType, someId, emptyStorageTerms, links, dataDivider);
+
+		sqlDatabaseFactorySpy.MCR.assertParameters("factorTableQuery", 1, "link");
+		TableQuerySpy tableQuerySpy = getFactoredTableQueryUsingCallNumber(1);
+		tableQuerySpy.MCR.assertParameters("addCondition", 0, "fromtype", "someType");
+		tableQuerySpy.MCR.assertParameters("addCondition", 1, "fromid", "someId");
+
+		OldTableFacadeSpy firstFactoredTableFacadeSpy = getFirstFactoredTableFacadeSpy();
+		firstFactoredTableFacadeSpy.MCR.assertParameters("deleteRowsForQuery", 1, tableQuerySpy);
+
+		sqlDatabaseFactorySpy.MCR.assertNumberOfCallsToMethod("factorTableQuery", 4);
+		sqlDatabaseFactorySpy.MCR.assertParameters("factorTableQuery", 2, "link");
+		sqlDatabaseFactorySpy.MCR.assertParameters("factorTableQuery", 3, "link");
+		TableQuerySpy tableQuery1 = getFactoredTableQueryUsingCallNumber(2);
+		assertLinkAsTableQuery((Link) links.toArray()[0], tableQuery1);
+		TableQuerySpy tableQuery2 = getFactoredTableQueryUsingCallNumber(3);
+		assertLinkAsTableQuery((Link) links.toArray()[1], tableQuery2);
+
+		firstFactoredTableFacadeSpy.MCR.assertNumberOfCallsToMethod("insertRowUsingQuery", 2);
+		firstFactoredTableFacadeSpy.MCR.assertParameters("insertRowUsingQuery", 0, tableQuery1);
+		firstFactoredTableFacadeSpy.MCR.assertParameters("insertRowUsingQuery", 1, tableQuery2);
+	}
+
+	@Test
+	public void testUpdateCollectedDataWhenSqlTransactionException() {
+		SqlDatabaseFactorySpy sqlDatabaseFactory = new SqlDatabaseFactorySpy();
+		TableFacadeSpy tableFacade = new TableFacadeSpy();
+		tableFacade.MRV.setDefaultReturnValuesSupplier("updateRowsUsingQuery", () -> 10);
+		sqlDatabaseFactory.MRV.setDefaultReturnValuesSupplier("factorTableFacade",
+				() -> tableFacade);
+		throwErrorInsideTransaction(sqlDatabaseFactory);
+
+		storage = new DatabaseRecordStorage(sqlDatabaseFactory, jsonParserSpy);
+
+		storage.updateCollectedData(someType, someId, emptyStorageTerms, emptyLinkSet, dataDivider);
+
+		assertTransactionRetries(tableFacade);
+	}
+
+	@Test
+	public void testUpdateTCollectedDataypeOrIdNotFound() {
+		try {
+			SqlDatabaseFactorySpy sqlDatabaseFactory = new SqlDatabaseFactorySpy();
+			TableFacadeSpy tableFacade = new TableFacadeSpy();
+			tableFacade.MRV.setDefaultReturnValuesSupplier("updateRowsUsingQuery", () -> 10);
+			sqlDatabaseFactory.MRV.setDefaultReturnValuesSupplier("factorTableFacade",
+					() -> tableFacade);
+			throwErrorInsideTransactionCollectedData(sqlDatabaseFactory);
+
+			storage = new DatabaseRecordStorage(sqlDatabaseFactory, jsonParserSpy);
+
+			storage.updateCollectedData(someType, someId, emptyStorageTerms, emptyLinkSet,
+					dataDivider);
+			fail("Must throw exception");
+
+		} catch (Exception e) {
+			assertTrue(e instanceof StorageException);
+			assertEquals(e.getMessage(),
+					"Storage exception when updating collected data record with recordType: someType and id: someId.");
+			assertEquals(e.getCause().getMessage(), "someMessageCollectedDAta");
+		}
+	}
+
+	private void throwErrorInsideTransactionCollectedData(
+			SqlDatabaseFactorySpy sqlDatabaseFactory) {
+		// Note: We throw the fake exception on sqlDatabaseFactory since we do not have the
+		// possibility to throw it on any of the tableFacade operations used by create transaction.
+		sqlDatabaseFactory.MRV.setDefaultReturnValuesSupplier("factorTableQuery",
+				this::thowExceptionOnFirstCallCollectedData);
+	}
+
+	private TableQuerySpy thowExceptionOnFirstCallCollectedData() {
+		counter++;
+		if (counter == 1) {
+			throw new RuntimeException("someMessageCollectedDAta");
+		}
+		return new TableQuerySpy();
 	}
 
 	@Test
