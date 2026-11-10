@@ -974,7 +974,7 @@ public class DatabaseRecordStorageTest {
 		tableFacadeSpy.MCR.assertMethodWasCalled("endTransaction");
 		tableFacadeSpy.MCR.assertMethodWasCalled("close");
 
-		tableFacadeSpy.MCR.assertNumberOfCallsToMethod("deleteRowsForQuery", 2);
+		tableFacadeSpy.MCR.assertNumberOfCallsToMethod("deleteRowsForQuery", 1);
 		tableFacadeSpy.MCR.assertNumberOfCallsToMethod("insertRowUsingQuery", 0);
 	}
 
@@ -994,14 +994,13 @@ public class DatabaseRecordStorageTest {
 		firstFactoredTableFacadeSpy.MCR.assertParameters("deleteRowsForQuery", 0,
 				deleteTableQuerySpy);
 
-		sqlDatabaseFactorySpy.MCR.assertNumberOfCallsToMethod("factorTableQuery", 4);
+		sqlDatabaseFactorySpy.MCR.assertNumberOfCallsToMethod("factorTableQuery", 3);
 		sqlDatabaseFactorySpy.MCR.assertParameters("factorTableQuery", 2, "storageterm");
-		sqlDatabaseFactorySpy.MCR.assertParameters("factorTableQuery", 3, "storageterm");
-		TableQuerySpy tableQuery1 = getFactoredTableQueryUsingCallNumber(2);
+		TableQuerySpy tableQuery1 = getFactoredTableQueryUsingCallNumber(1);
 		Object[] storageTermsArray = storageTerms.toArray();
 		assertStorageTermAsTableQuery((StorageTerm) storageTermsArray[0], tableQuery1);
 
-		TableQuerySpy tableQuery2 = getFactoredTableQueryUsingCallNumber(3);
+		TableQuerySpy tableQuery2 = getFactoredTableQueryUsingCallNumber(2);
 		assertStorageTermAsTableQuery((StorageTerm) storageTermsArray[1], tableQuery2);
 
 		firstFactoredTableFacadeSpy.MCR.assertNumberOfCallsToMethod("insertRowUsingQuery", 2);

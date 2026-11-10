@@ -416,7 +416,6 @@ public class DatabaseRecordStorage implements RecordStorage {
 			TableFacade tableFacade) {
 		tableFacade.startTransaction();
 		createDeleteQueryForStorageTermAndAddItToTableFacade(type, id, tableFacade);
-		createDeleteQueryForLinkAndAddItToTableFacade(type, id, tableFacade);
 		createCreateQueriesForStorageTermsAndAddThemToTableFacade(type, id, storageTerms,
 				tableFacade);
 		tableFacade.endTransaction();
