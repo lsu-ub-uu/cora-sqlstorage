@@ -77,9 +77,9 @@ public class CachedDatabaseRecordStorage implements RecordStorage {
 
 	@Override
 	public void updateCollectedData(String type, String id, Set<StorageTerm> storageTerms,
-			Set<Link> links, String dataDivider) {
-		database.updateCollectedData(type, id, storageTerms, links, dataDivider);
-		memory.updateCollectedData(type, id, storageTerms, links, dataDivider);
+			String dataDivider) {
+		database.updateCollectedData(type, id, storageTerms, dataDivider);
+		memory.updateCollectedData(type, id, storageTerms, dataDivider);
 	}
 
 	@Override

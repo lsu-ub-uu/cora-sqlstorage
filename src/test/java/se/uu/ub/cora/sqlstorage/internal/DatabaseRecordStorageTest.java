@@ -958,7 +958,7 @@ public class DatabaseRecordStorageTest {
 
 	@Test
 	public void testUpdateCollectedDataClosed() {
-		storage.updateCollectedData(someType, someId, emptyStorageTerms, emptyLinkSet, dataDivider);
+		storage.updateCollectedData(someType, someId, emptyStorageTerms, dataDivider);
 		OldTableFacadeSpy tableFacadeSpy = getFirstFactoredTableFacadeSpy();
 		tableFacadeSpy.MCR.assertMethodWasCalled("close");
 	}
@@ -967,7 +967,7 @@ public class DatabaseRecordStorageTest {
 	public void testUpdateCollectedDataParametersAssertRecord() {
 		sqlDatabaseFactorySpy.usingTransaction = true;
 
-		storage.updateCollectedData(someType, someId, emptyStorageTerms, emptyLinkSet, dataDivider);
+		storage.updateCollectedData(someType, someId, emptyStorageTerms, dataDivider);
 
 		OldTableFacadeSpy tableFacadeSpy = getFirstFactoredTableFacadeSpy();
 		tableFacadeSpy.MCR.assertMethodWasCalled("startTransaction");
@@ -983,7 +983,7 @@ public class DatabaseRecordStorageTest {
 		sqlDatabaseFactorySpy.usingTransaction = true;
 		Set<StorageTerm> storageTerms = createStorageTerms();
 
-		storage.updateCollectedData(someType, someId, storageTerms, emptyLinkSet, dataDivider);
+		storage.updateCollectedData(someType, someId, storageTerms, dataDivider);
 
 		sqlDatabaseFactorySpy.MCR.assertParameters("factorTableQuery", 0, "storageterm");
 		TableQuerySpy deleteTableQuerySpy = getFactoredTableQueryUsingCallNumber(0);
@@ -1010,33 +1010,6 @@ public class DatabaseRecordStorageTest {
 	}
 
 	@Test
-	public void testUpdateCollectedDataAssertLink() {
-		sqlDatabaseFactorySpy.usingTransaction = true;
-		Set<Link> links = createLinks();
-		storage.updateCollectedData(someType, someId, emptyStorageTerms, links, dataDivider);
-
-		sqlDatabaseFactorySpy.MCR.assertParameters("factorTableQuery", 1, "link");
-		TableQuerySpy tableQuerySpy = getFactoredTableQueryUsingCallNumber(1);
-		tableQuerySpy.MCR.assertParameters("addCondition", 0, "fromtype", "someType");
-		tableQuerySpy.MCR.assertParameters("addCondition", 1, "fromid", "someId");
-
-		OldTableFacadeSpy firstFactoredTableFacadeSpy = getFirstFactoredTableFacadeSpy();
-		firstFactoredTableFacadeSpy.MCR.assertParameters("deleteRowsForQuery", 1, tableQuerySpy);
-
-		sqlDatabaseFactorySpy.MCR.assertNumberOfCallsToMethod("factorTableQuery", 4);
-		sqlDatabaseFactorySpy.MCR.assertParameters("factorTableQuery", 2, "link");
-		sqlDatabaseFactorySpy.MCR.assertParameters("factorTableQuery", 3, "link");
-		TableQuerySpy tableQuery1 = getFactoredTableQueryUsingCallNumber(2);
-		assertLinkAsTableQuery((Link) links.toArray()[0], tableQuery1);
-		TableQuerySpy tableQuery2 = getFactoredTableQueryUsingCallNumber(3);
-		assertLinkAsTableQuery((Link) links.toArray()[1], tableQuery2);
-
-		firstFactoredTableFacadeSpy.MCR.assertNumberOfCallsToMethod("insertRowUsingQuery", 2);
-		firstFactoredTableFacadeSpy.MCR.assertParameters("insertRowUsingQuery", 0, tableQuery1);
-		firstFactoredTableFacadeSpy.MCR.assertParameters("insertRowUsingQuery", 1, tableQuery2);
-	}
-
-	@Test
 	public void testUpdateCollectedDataWhenSqlTransactionException() {
 		SqlDatabaseFactorySpy sqlDatabaseFactory = new SqlDatabaseFactorySpy();
 		TableFacadeSpy tableFacade = new TableFacadeSpy();
@@ -1047,7 +1020,7 @@ public class DatabaseRecordStorageTest {
 
 		storage = new DatabaseRecordStorage(sqlDatabaseFactory, jsonParserSpy);
 
-		storage.updateCollectedData(someType, someId, emptyStorageTerms, emptyLinkSet, dataDivider);
+		storage.updateCollectedData(someType, someId, emptyStorageTerms, dataDivider);
 
 		assertTransactionRetries(tableFacade);
 	}
@@ -1064,8 +1037,7 @@ public class DatabaseRecordStorageTest {
 
 			storage = new DatabaseRecordStorage(sqlDatabaseFactory, jsonParserSpy);
 
-			storage.updateCollectedData(someType, someId, emptyStorageTerms, emptyLinkSet,
-					dataDivider);
+			storage.updateCollectedData(someType, someId, emptyStorageTerms, dataDivider);
 			fail("Must throw exception");
 
 		} catch (Exception e) {

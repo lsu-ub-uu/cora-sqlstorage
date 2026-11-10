@@ -116,12 +116,11 @@ public class CachedDatabaseRecordStorageTest {
 
 	@Test
 	public void testUpdateCollectedDataSentToMemoryAndDatabase() {
-		db.updateCollectedData(type, id, storageTerms, links, dataDivider);
+		db.updateCollectedData(type, id, storageTerms, dataDivider);
 
-		memory.MCR.assertParameters("updateCollectedData", 0, type, id, storageTerms, links,
-				dataDivider);
+		memory.MCR.assertParameters("updateCollectedData", 0, type, id, storageTerms, dataDivider);
 
-		database.MCR.assertParameters("updateCollectedData", 0, type, id, storageTerms, links,
+		database.MCR.assertParameters("updateCollectedData", 0, type, id, storageTerms,
 				dataDivider);
 	}
 
