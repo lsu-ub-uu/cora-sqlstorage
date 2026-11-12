@@ -391,6 +391,36 @@ public class DatabaseRecordStorage implements RecordStorage {
 		return updatedRows;
 	}
 
+	@Override
+	public void updateCollectedData(String type, String id, Set<StorageTerm> storageTerms,
+			String dataDivider) {
+		try (TableFacade tableFacade = sqlDatabaseFactory.factorTableFacade()) {
+			tryToUpdateCollectedDataWithRetry(type, id, storageTerms, dataDivider, tableFacade);
+		} catch (Exception e) {
+			throw createStorageExceptionUsingAction(type, id, "updating collected data", e);
+		}
+	}
+
+	private void tryToUpdateCollectedDataWithRetry(String type, String id,
+			Set<StorageTerm> storageTerms, String dataDivider, TableFacade tableFacade)
+			throws SQLException {
+		try {
+			tryToUpdateCollectedData(type, id, storageTerms, tableFacade);
+		} catch (SqlTransactionException _) {
+			tableFacade.rollback();
+			tryToUpdateCollectedDataWithRetry(type, id, storageTerms, dataDivider, tableFacade);
+		}
+	}
+
+	private void tryToUpdateCollectedData(String type, String id, Set<StorageTerm> storageTerms,
+			TableFacade tableFacade) {
+		tableFacade.startTransaction();
+		createDeleteQueryForStorageTermAndAddItToTableFacade(type, id, tableFacade);
+		createCreateQueriesForStorageTermsAndAddThemToTableFacade(type, id, storageTerms,
+				tableFacade);
+		tableFacade.endTransaction();
+	}
+
 	private void throwRecordNotFoundExceptionIfAffectedRowsIsZero(String type, String id,
 			int affectedRows, String storageAction) {
 		if (affectedRows == 0) {
